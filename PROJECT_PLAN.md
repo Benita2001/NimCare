@@ -209,10 +209,10 @@ Never include secrets or private keys in this file.
 
 ## 14. Current State
 
-**Current phase:** Phase 0 (Environment and Risk Validation) — entering after Planning Gate.
-**Current milestone:** Repository scaffolding and spike research.
-**Primary blocker:** No confirmed physical Nimiq Pay device/wallet or funded test NIM in this environment — real on-device verification of Spikes 1, 2, 5 will require human participation.
-**Next phase condition:** SDK research complete, app scaffolded, backend skeleton running.
+**Current phase:** Phase 6/7 (Quality hardening + Submission docs) for the implemented vertical slice; Phases 0–4 complete for everything buildable without a physical device.
+**Current milestone:** Full Critical Demo Path implemented and proven at the API/data layer via a live end-to-end smoke test (pair → invite → accept → CareDrop → payment submit → degraded verification → response → completion → memory), plus a live in-browser UI check of the wallet-connect error path. See `MEMORY.md` for exact evidence.
+**Primary blocker:** No confirmed physical Nimiq Pay device/funded wallet in this environment (blocks NIM-026 on-device UI proof) and no confirmed production database/Nimiq RPC credentials (blocks NIM-029 deployment). Both are explicit, disclosed human actions — not silently worked around.
+**Next phase condition:** A human runs NIM-026 (real device test) and provides deployment credentials for NIM-029; then final rule audit (NIM-030) and submission.
 
 ## 15. Major Blockers
 
