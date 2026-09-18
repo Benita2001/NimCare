@@ -13,11 +13,22 @@ import { nimToLuna } from '../lib/luna';
  *   string, to isolate whether attaching *any* data is the problem.
  * Test C: sendBasicTransactionWithData() with a reference in the *exact*
  *   format a real CareDrop uses (`NC:D:<10 chars>`, matching
- *   server/src/routes/caredrops.ts's shortRef()) — to isolate whether the
- *   normal reference format specifically (as opposed to data in general)
- *   is what the provider rejects. Real device evidence (2026-09-18) shows
- *   A and B both succeed while the normal CareDrop flow still fails, so C
- *   is the test that actually distinguishes the remaining hypotheses.
+ *   server/src/routes/caredrops.ts's shortRef()).
+ * Test E1-E5: same known-working (Test C) payload, with an increasing
+ *   amount of async work (delay or harmless fetches) inserted between the
+ *   tap and the provider call — to test whether elapsed time / intervening
+ *   async work since the user gesture correlates with internal_error.
+ * Test F1-F3: same known-working payload, varying whether the
+ *   isConsensusEstablished()/getBlockNumber() preflight calls happen
+ *   before the send — to test whether those preflight calls themselves
+ *   matter.
+ *
+ * Real device evidence (2026-09-18): A, B, and C (with no preceding async
+ * work) all PASS, while the normal CareDrop flow — which does a photo
+ * upload and a backend round trip before the provider call — still fails.
+ * E and F exist to test the leading hypothesis this points to: that
+ * elapsed time / intervening async work since the user's tap, not the
+ * payload itself, is what the provider rejects.
  *
  * Remove this file and its App.tsx wiring once the real device retest has
  * identified (and this hotfix has fixed) the cause — it must not ship
@@ -28,6 +39,30 @@ function generateNormalFormatReference(): string {
   return `NC:D:${id}`;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** A harmless, side-effect-free network round trip, purely to occupy time
+ * the same way a real API call would (not to test any endpoint's content). */
+async function harmlessFetch(): Promise<void> {
+  try {
+    await fetch('/api/health');
+  } catch {
+    // Irrelevant to the test — we only care about the elapsed time, not
+    // whether this particular endpoint exists or succeeds.
+  }
+}
+
+interface RunOptions {
+  label: string;
+  data?: string;
+  preDelayMs?: number;
+  preFetchCount?: number;
+  skipConsensusCheck?: boolean;
+  skipBlockNumberCheck?: boolean;
+}
+
 export function TxDiagnosticScreen() {
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('0.00001');
@@ -36,34 +71,59 @@ export function TxDiagnosticScreen() {
 
   const append = (line: string) => setLog((l) => [...l, line]);
 
-  const runTest = async (label: string, data?: string) => {
+  const runTest = async (opts: RunOptions) => {
     setBusy(true);
-    append(`--- ${label} ---`);
+    const tapStartedAt = performance.now();
+    const since = () => `t+${Math.round(performance.now() - tapStartedAt)}ms`;
+    append(`--- ${opts.label} (${since()}) ---`);
     try {
+      if (opts.preDelayMs) {
+        await delay(opts.preDelayMs);
+        append(`after delay (${since()})`);
+      }
+      for (let i = 0; i < (opts.preFetchCount ?? 0); i++) {
+        await harmlessFetch();
+        append(`after harmless fetch ${i + 1} (${since()})`);
+      }
+
       const provider = await getProvider();
-      const consensus = await provider.isConsensusEstablished();
-      append(`consensus: ${consensus}`);
-      const blockNumber = await provider.getBlockNumber().catch(() => 'unavailable');
-      append(`blockNumber: ${blockNumber}`);
+      append(`provider ready (${since()})`);
+
+      if (!opts.skipConsensusCheck) {
+        const consensus = await provider.isConsensusEstablished();
+        append(`consensus: ${consensus} (${since()})`);
+      }
+      if (!opts.skipBlockNumberCheck) {
+        const blockNumber = await provider.getBlockNumber().catch(() => 'unavailable');
+        append(`blockNumber: ${blockNumber} (${since()})`);
+      }
+
       const amountLuna = nimToLuna(amount || '0');
       append(`recipient: ${recipient || '(empty)'}`);
       append(`value (luna): ${amountLuna}`);
-      if (data !== undefined) {
-        append(`data: ${data} (${new TextEncoder().encode(data).length} bytes)`);
+      if (opts.data !== undefined) {
+        append(`data: ${opts.data} (${new TextEncoder().encode(opts.data).length} bytes)`);
       }
 
-      const result = data !== undefined
-        ? await provider.sendBasicTransactionWithData({ recipient, value: amountLuna, data })
+      append(`send starting (${since()})`);
+      const result = opts.data !== undefined
+        ? await provider.sendBasicTransactionWithData({ recipient, value: amountLuna, data: opts.data })
         : await provider.sendBasicTransaction({ recipient, value: amountLuna });
-      append(`result: ${JSON.stringify(result)}`);
+      append(`result (${since()}): ${JSON.stringify(result)}`);
     } catch (err) {
       const ctor = err && typeof err === 'object' ? err.constructor?.name : typeof err;
       const message = err instanceof Error ? err.message : String(err);
-      append(`threw: ${ctor}: ${message}`);
+      append(`threw (${since()}): ${ctor}: ${message}`);
     } finally {
       setBusy(false);
     }
   };
+
+  const btn = (label: string, opts: Omit<RunOptions, 'label'>) => (
+    <button className="btn btn-primary" disabled={busy} onClick={() => runTest({ label, ...opts })}>
+      {label}
+    </button>
+  );
 
   return (
     <div className="screen" style={{ fontFamily: 'monospace', fontSize: 12 }}>
@@ -75,24 +135,25 @@ export function TxDiagnosticScreen() {
       <input className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="NQ.." />
       <label className="field-label">Amount (NIM)</label>
       <input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
-      <button className="btn btn-primary" disabled={busy} onClick={() => runTest('Test A: sendBasicTransaction')}>
-        Test A: sendBasicTransaction
-      </button>
-      <button
-        className="btn btn-primary"
-        disabled={busy}
-        onClick={() => runTest('Test B: sendBasicTransactionWithData (arbitrary data)', 'NC:DIAG:TEST')}
-      >
-        Test B: with arbitrary data
-      </button>
-      <button
-        className="btn btn-primary"
-        disabled={busy}
-        onClick={() => runTest('Test C: sendBasicTransactionWithData (normal reference format)', generateNormalFormatReference())}
-      >
-        Test C: with normal reference format
-      </button>
-      <button className="btn btn-ghost" onClick={() => setLog([])}>
+
+      <p className="hint" style={{ marginTop: 12 }}>Baseline (already run on-device with PASS — for reference/re-run only)</p>
+      {btn('Test A: sendBasicTransaction', {})}
+      {btn('Test B: with arbitrary data', { data: 'NC:DIAG:TEST' })}
+      {btn('Test C: with normal reference format', { data: generateNormalFormatReference() })}
+
+      <p className="hint" style={{ marginTop: 12 }}>Test E: delay differential (known-working payload, varying async work before send)</p>
+      {btn('E1: send immediately', { data: generateNormalFormatReference() })}
+      {btn('E2: wait 500ms, then send', { data: generateNormalFormatReference(), preDelayMs: 500 })}
+      {btn('E3: wait 2s, then send', { data: generateNormalFormatReference(), preDelayMs: 2000 })}
+      {btn('E4: 1 harmless fetch, then send', { data: generateNormalFormatReference(), preFetchCount: 1 })}
+      {btn('E5: 2 harmless fetches, then send', { data: generateNormalFormatReference(), preFetchCount: 2 })}
+
+      <p className="hint" style={{ marginTop: 12 }}>Test F: preflight call order (known-working payload)</p>
+      {btn('F1: send directly, no preflight', { data: generateNormalFormatReference(), skipConsensusCheck: true, skipBlockNumberCheck: true })}
+      {btn('F2: consensus check, then send', { data: generateNormalFormatReference(), skipBlockNumberCheck: true })}
+      {btn('F3: consensus + block number, then send (matches normal flow)', { data: generateNormalFormatReference() })}
+
+      <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => setLog([])}>
         Clear log
       </button>
       <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', background: '#f4f4f4', padding: 8, marginTop: 12 }}>

@@ -135,6 +135,17 @@ Triggered by decisive real-device evidence: Test A (`sendBasicTransaction`) and 
 - **NIM-077** [DONE] Added Test C to `TxDiagnosticScreen`: `sendBasicTransactionWithData` using the exact normal-CareDrop reference format, to distinguish "any attached data fails" from "this specific reference format fails."
 - **NIM-078** [TODO — blocking] Real device retest (including Test C) not yet performed. The raw-recipient bug is a confirmed, real defect regardless of whether it's proven to be the sole cause of `internal_error`.
 
+## Phase 14 — Timing/Lifecycle Investigation (2026-09-18)
+
+Triggered by real-device evidence: Test A/B/C all PASS with real tx hashes using the exact normal-CareDrop payload format, while the normal Composer flow still returns `internal_error` — narrowing the search from payload content to process/timing differences.
+
+- **NIM-079** [DONE] Traced `sendBasicTransactionWithData` through the installed `@nimiq/mini-app-sdk` source. Confirmed the actual method implementations are native (not in the npm package) — static tracing can only characterize our own code's timing, not the native bridge's internal behavior. Stated as a genuine limit, not glossed over.
+- **NIM-080** [DONE] Exhaustive grep-based audit: confirmed no other component calls the Nimiq provider concurrently with a payment attempt.
+- **NIM-081** [DONE] Fixed a real, independently-confirmed bug: the "Create surprise" button had no double-tap guard, risking a duplicate CareDrop row and duplicate provider request on a rapid double-tap. Fixed with a synchronous `useRef` guard (not just a React state update, which is too slow to rule out the race) plus per-attempt correlation IDs and elapsed-time-since-tap on every diagnostic marker.
+- **NIM-082** [DONE] Built three device-provable tests for the leading (unproven) timing hypothesis, none run automatically: Test D ("Replay exact payload" button on Composer's error screen), Test E1-E5 (delay/fetch differential) and Test F1-F3 (preflight call-order differential) on `TxDiagnosticScreen`, and a new `PreparedCardTest.tsx` (`?diag=prepared`) that splits CareDrop creation and payment into two separate real user gestures.
+- **NIM-083** [DONE] Production error message updated to the exact requested text ("We couldn't open the Nimiq Pay transaction. Please try again.") — never shows raw `internal_error`.
+- **NIM-084** [TODO — blocking, demo-critical] Root cause NOT proven. Requires a human to run, in order: Test D (replay), then either E/F or the Prepared-Card test, on the real device, and report which succeed/fail. Only after that should production architecture (the "prepare before final tap" restructure) be considered — explicitly not done speculatively in this pass.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

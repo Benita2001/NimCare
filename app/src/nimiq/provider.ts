@@ -155,7 +155,7 @@ function classifyProviderFailure(source: unknown): { kind: PaymentErrorKind; mes
     message = 'Your wallet is still connecting to the Nimiq network.';
   } else if (key.includes('internalerror') || key === 'internal') {
     kind = 'InternalError';
-    message = 'Nimiq Pay could not create this transaction.';
+    message = "We couldn't open the Nimiq Pay transaction. Please try again.";
   } else {
     kind = 'Unknown';
     message = rawMessage && rawMessage.trim() ? rawMessage : 'Nimiq Pay could not complete this transaction.';
@@ -168,17 +168,43 @@ function classifyProviderFailure(source: unknown): { kind: PaymentErrorKind; mes
   return { kind, message, diagnostic: diagnosticParts.join(' ') };
 }
 
+let attemptCounter = 0;
+
+/**
+ * Generates a short, non-sensitive per-attempt id so overlapping or
+ * duplicate provider calls (e.g. a rapid double-tap firing the handler
+ * twice) are distinguishable in the console log — see MEMORY.md
+ * 2026-09-18 timing/lifecycle investigation, instruction #19. Exported so
+ * callers (Composer.tsx) can generate one synchronously at tap-time and
+ * pass it through, before any async work begins.
+ */
+export function nextAttemptId(): string {
+  attemptCounter += 1;
+  return `a${attemptCounter}-${Date.now().toString(36)}`;
+}
+
+function elapsedSince(startedAt: number | undefined): string {
+  return startedAt !== undefined ? ` t+${Math.round(performance.now() - startedAt)}ms` : '';
+}
+
 export async function sendCareDropPayment(params: {
   recipient: string;
   amountLuna: number;
   reference: string;
+  /** Caller-supplied id from beginPaymentAttempt(), for log correlation. */
+  attemptId?: string;
+  /** performance.now() captured at the originating user tap, for elapsed-time diagnostics. */
+  tapStartedAt?: number;
 }): Promise<NimiqResult<string>> {
+  const attemptId = params.attemptId ?? nextAttemptId();
+  const since = () => elapsedSince(params.tapStartedAt);
+  markStage(`PAYMENT_ATTEMPT:${attemptId}:start${since()}`);
   try {
     const provider = await getProvider();
-    markStage('PAYMENT:provider-ready');
+    markStage(`PAYMENT:provider-ready${since()}`);
 
     const consensus = await provider.isConsensusEstablished();
-    markStage(`PAYMENT:consensus:${consensus}`);
+    markStage(`PAYMENT:consensus:${consensus}${since()}`);
     if (!consensus) {
       return {
         ok: false,
@@ -189,10 +215,10 @@ export async function sendCareDropPayment(params: {
 
     try {
       const blockNumber = await provider.getBlockNumber();
-      markStage(`PAYMENT:block-height:${blockNumber}`);
+      markStage(`PAYMENT:block-height:${blockNumber}${since()}`);
     } catch {
       // Diagnostic only — never blocks a payment attempt.
-      markStage('PAYMENT:block-height:unavailable');
+      markStage(`PAYMENT:block-height:unavailable${since()}`);
     }
 
     if (!params.recipient || typeof params.recipient !== 'string') {
@@ -206,14 +232,14 @@ export async function sendCareDropPayment(params: {
     // here — it's a public wallet address, not sensitive — because the
     // 2026-09-18 differential hotfix needs to compare this exact payload
     // against the real-device diagnostic tests' payloads byte for byte.
-    markStage(`PAYMENT:recipient:${params.recipient}`);
+    markStage(`PAYMENT:recipient:${params.recipient}${since()}`);
     if (hasInvisibleOrNonstandardChars(params.recipient)) {
       markStage('PAYMENT:recipient:contains-invisible-chars');
     }
-    markStage(`PAYMENT:value-luna:${params.amountLuna}`);
+    markStage(`PAYMENT:value-luna:${params.amountLuna}${since()}`);
 
     const dataBytes = new TextEncoder().encode(params.reference).length;
-    markStage(`PAYMENT:data-bytes:${dataBytes}`);
+    markStage(`PAYMENT:data-bytes:${dataBytes}${since()}`);
     if (hasInvisibleOrNonstandardChars(params.reference)) {
       markStage('PAYMENT:reference:contains-invisible-chars');
     }
@@ -225,7 +251,8 @@ export async function sendCareDropPayment(params: {
       };
     }
 
-    markStage('PAYMENT:send:start');
+    markStage(`PAYMENT:send:start${since()}`);
+    markStage(`PAYMENT_ATTEMPT:${attemptId}:provider-call${since()}`);
     const result = await provider.sendBasicTransactionWithData({
       recipient: params.recipient,
       value: params.amountLuna,
@@ -234,13 +261,16 @@ export async function sendCareDropPayment(params: {
 
     if (isErrorResponse(result)) {
       const { kind, message, diagnostic } = classifyProviderFailure(result);
-      markStage(`PAYMENT:send:error:${diagnostic}`);
+      markStage(`PAYMENT:send:error:${diagnostic}${since()}`);
+      markStage(`PAYMENT_ATTEMPT:${attemptId}:error${since()}`);
       return { ok: false, kind, message };
     }
+    markStage(`PAYMENT_ATTEMPT:${attemptId}:success${since()}`);
     return { ok: true, value: result };
   } catch (err) {
     const { kind, message, diagnostic } = classifyProviderFailure(err);
-    markStage(`PAYMENT:send:error:${diagnostic}`);
+    markStage(`PAYMENT:send:error:${diagnostic}${since()}`);
+    markStage(`PAYMENT_ATTEMPT:${attemptId}:error${since()}`);
     return { ok: false, kind, message };
   }
 }

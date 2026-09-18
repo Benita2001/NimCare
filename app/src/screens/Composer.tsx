@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from '../sessionContext';
 import { api, type CareDropType } from '../api/client';
 import { nimToLuna, lunaToNim, shortenAddress } from '../lib/luna';
-import { sendCareDropPayment, type PaymentErrorKind } from '../nimiq/provider';
+import { sendCareDropPayment, nextAttemptId, type PaymentErrorKind } from '../nimiq/provider';
+import { markStage } from '../diagnostics';
 
 type Step = 'content' | 'recipient' | 'amount' | 'review' | 'sending' | 'error';
 
@@ -37,6 +38,12 @@ export function ComposerScreen({
   const [error, setError] = useState<string | null>(null);
   const [drop, setDrop] = useState<CreatedDrop | null>(null);
   const [debugInfo, setDebugInfo] = useState<PaymentDebugInfo | null>(null);
+  // Synchronous guard against a double-tap firing the handler twice before
+  // React's re-render removes the button (setStep is asynchronous; a ref
+  // read/write is not). See MEMORY.md 2026-09-18 timing/lifecycle
+  // investigation, instruction #18/#19 — one human tap must produce
+  // exactly one provider transaction request.
+  const inFlightRef = useRef(false);
 
   // content
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -76,8 +83,9 @@ export function ComposerScreen({
    * failed through this path when it reused un-canonicalized input. See
    * MEMORY.md 2026-09-18 differential hotfix.
    */
-  const attemptPayment = async (createdDrop: CreatedDrop) => {
+  const attemptPayment = async (createdDrop: CreatedDrop, tapStartedAt: number) => {
     if (!sessionToken) return;
+    const attemptId = nextAttemptId();
     setStep('sending');
     setError(null);
     setDebugInfo(null);
@@ -86,6 +94,8 @@ export function ComposerScreen({
         recipient: createdDrop.recipient,
         amountLuna: createdDrop.amountLuna,
         reference: createdDrop.reference,
+        attemptId,
+        tapStartedAt,
       });
       if (!payment.ok) {
         setError(payment.message);
@@ -106,11 +116,16 @@ export function ComposerScreen({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong sending your CareDrop.');
       setStep('error');
+    } finally {
+      inFlightRef.current = false;
     }
   };
 
   const create = async () => {
-    if (!sessionToken) return;
+    if (!sessionToken || inFlightRef.current) return;
+    inFlightRef.current = true;
+    const tapStartedAt = performance.now();
+    markStage('COMPOSER:tap:create-surprise t+0ms');
     setStep('sending');
     setError(null);
     setDebugInfo(null);
@@ -118,12 +133,15 @@ export function ComposerScreen({
       let mediaUrl: string | undefined;
       let mediaMime: string | undefined;
       if (type === 'PHOTO' && photoFile) {
+        markStage(`COMPOSER:upload:start t+${Math.round(performance.now() - tapStartedAt)}ms`);
         const uploaded = await api.uploadPhoto(photoFile, sessionToken);
         mediaUrl = uploaded.url;
         mediaMime = uploaded.mime;
+        markStage(`COMPOSER:upload:done t+${Math.round(performance.now() - tapStartedAt)}ms`);
       }
 
       const amountLuna = nimToLuna(amount);
+      markStage(`COMPOSER:caredrop-create:start t+${Math.round(performance.now() - tapStartedAt)}ms`);
       const createdDrop = await api.createCareDrop(
         {
           recipientWallet: recipient,
@@ -137,11 +155,16 @@ export function ComposerScreen({
         },
         sessionToken,
       );
+      markStage(`COMPOSER:caredrop-create:done t+${Math.round(performance.now() - tapStartedAt)}ms`);
       setDrop(createdDrop);
-      await attemptPayment(createdDrop);
+      // inFlightRef stays true across into attemptPayment — a single
+      // logical "send" spans both; attemptPayment clears it in its
+      // finally block once the whole attempt (success or failure) ends.
+      await attemptPayment(createdDrop, tapStartedAt);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong creating your CareDrop.');
       setStep('error');
+      inFlightRef.current = false;
     }
   };
 
@@ -155,11 +178,33 @@ export function ComposerScreen({
    * 2026-09-18 differential hotfix.
    */
   const retry = () => {
+    if (inFlightRef.current) return;
     if (drop) {
-      attemptPayment(drop);
+      inFlightRef.current = true;
+      markStage('COMPOSER:tap:try-again t+0ms');
+      attemptPayment(drop, performance.now());
     } else {
       create();
     }
+  };
+
+  /**
+   * TEMPORARY diagnostic action for the 2026-09-18 timing/lifecycle
+   * investigation (Instruction #5, "Test D — exact failed CareDrop
+   * payload replay"): a fresh direct tap that performs ONLY the provider
+   * send for the already-created drop — no upload, no createCareDrop
+   * call, no changes to recipient/amount/reference. Functionally this is
+   * identical to `retry()` (which already only re-sends, never
+   * re-creates, after the earlier differential hotfix) — it exists as a
+   * separately, unambiguously labeled action so a device tester can
+   * report exactly which button they pressed. Remove once the timing
+   * hypothesis is proven or rejected on a real device.
+   */
+  const replayExactPayload = () => {
+    if (inFlightRef.current || !drop) return;
+    inFlightRef.current = true;
+    markStage('COMPOSER:tap:replay-exact-payload t+0ms');
+    attemptPayment(drop, performance.now());
   };
 
   if (step === 'sending') {
@@ -180,6 +225,11 @@ export function ComposerScreen({
         </div>
         <button className="btn btn-primary" onClick={retry}>Try again</button>
         <button className="btn btn-ghost" onClick={onBack}>Cancel</button>
+        {drop && (
+          <button className="btn btn-ghost" onClick={replayExactPayload} style={{ fontSize: 12 }}>
+            Replay exact payload (diagnostic)
+          </button>
+        )}
         {debugInfo && (
           <details style={{ marginTop: 16, fontFamily: 'monospace', fontSize: 12 }}>
             <summary>Payload diagnostics (temporary, dev-only)</summary>

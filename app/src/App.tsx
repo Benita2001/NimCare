@@ -9,6 +9,7 @@ import { ShareSuccessScreen } from './screens/ShareSuccess';
 import { CareDropScreen } from './screens/Reveal';
 import { LoopScreen } from './screens/LoopScreen';
 import { TxDiagnosticScreen } from './screens/TxDiagnostic';
+import { PreparedCardTestScreen } from './screens/PreparedCardTest';
 import type { CareDropType } from './api/client';
 
 type Route =
@@ -35,6 +36,11 @@ function Router() {
   // reachable via ?diag=tx — never linked from normal navigation.
   if (new URLSearchParams(window.location.search).get('diag') === 'tx') {
     return <TxDiagnosticScreen />;
+  }
+  // Same pattern, for the "prepared-card" test (see PreparedCardTest.tsx /
+  // MEMORY.md instruction #20) — only reachable via ?diag=prepared.
+  if (new URLSearchParams(window.location.search).get('diag') === 'prepared') {
+    return <PreparedCardTestScreen />;
   }
 
   switch (route.name) {
