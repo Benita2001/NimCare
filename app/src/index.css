@@ -91,19 +91,26 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
 .prompt-text { font-size: 17px; color: var(--color-text); }
 .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--color-text-muted); text-transform: uppercase; }
 
-/* --- Hero (Home / Welcome) --- */
+/* --- Hero (Home / Welcome) ---
+   The envelope mascot is the fixed symbolic anchor: same 148x148 size and
+   top-center position at every breakpoint (never enlarged, never moved).
+   Supporting illustration clusters (photo/music/movie objects + pastel
+   blobs) flank it on wider screens without touching its size or position. */
 .hero-shell {
   display: block;
   padding: 12px 0 8px;
+  position: relative;
 }
-.hero-center { text-align: center; }
-.hero-cluster { display: none; } /* desktop-only clusters, shown at the wide breakpoint below */
+.hero-center { text-align: center; position: relative; z-index: 1; }
+.hero-cluster { display: none; } /* side clusters only appear at the wide breakpoint below */
 
-.hero-mobile-char {
+.hero-envelope {
   width: 148px;
   height: 148px;
   margin: 0 auto 8px;
   animation: float 4.5s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
 }
 .hero-char { width: 100%; height: 100%; display: block; color: var(--color-border); }
 
@@ -122,13 +129,20 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-10px) rotate(-2deg); }
 }
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .hero-mobile-char, .hero-char-main, .hero-char-secondary, .hero-char-tertiary, .hero-accent { animation: none !important; }
+  .hero-envelope, .hero-obj, .hero-accent { animation: none !important; }
 }
 
-/* Desktop: three-part flanking composition. Only the app's marketing-style
-   entry screens (Welcome, Home) opt into the wide shell via .screen-wide;
-   every functional in-flow screen keeps the narrow single-column layout. */
+/* Desktop: envelope stays centered above the headline; left/right clusters
+   add supporting illustrated objects (not duplicate envelopes) with soft
+   pastel blobs behind them for a fuller, more art-directed composition.
+   Only the app's marketing-style entry screens (Welcome, Home) opt into
+   this wide shell via .screen-wide; every functional in-flow screen keeps
+   the narrow single-column layout. */
 @media (min-width: 900px) {
   .screen.screen-wide { max-width: 1120px; }
   .hero-shell {
@@ -136,21 +150,29 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
     grid-template-columns: 1fr 1.15fr 1fr;
     align-items: center;
     gap: 24px;
-    padding: 40px 0 24px;
+    padding: 30px 0 24px;
   }
-  .hero-mobile-char { display: none; }
   .hero-cluster {
     display: block;
     position: relative;
-    height: 340px;
+    height: 360px;
   }
-  .hero-char-main { position: absolute; left: 12%; top: 18%; width: 190px; height: 190px; animation: float 5s ease-in-out infinite; }
-  .hero-char-secondary { position: absolute; right: 18%; top: 6%; width: 150px; height: 150px; animation: float 4.2s ease-in-out infinite 0.4s; }
-  .hero-char-tertiary { position: absolute; right: -4%; bottom: 4%; width: 150px; height: 150px; animation: float 4.8s ease-in-out infinite 0.9s; }
-  .hero-accent { position: absolute; width: 26px; height: 26px; animation: float 3.6s ease-in-out infinite; }
-  .hero-accent-a { left: 2%; top: 8%; }
-  .hero-accent-b { left: 30%; bottom: 10%; width: 22px; height: 22px; }
-  .hero-accent-c { left: 40%; top: 2%; }
+  .hero-blob { position: absolute; opacity: 0.7; filter: blur(0.5px); }
+  .hero-blob-1 { width: 220px; height: 220px; left: -10%; top: 4%; }
+  .hero-blob-2 { width: 150px; height: 150px; right: 6%; bottom: 2%; }
+  .hero-blob-3 { width: 190px; height: 190px; right: -6%; top: 10%; }
+  .hero-blob-4 { width: 130px; height: 130px; left: 10%; bottom: 6%; }
+
+  .hero-obj { position: absolute; z-index: 1; }
+  .hero-obj-main { left: 8%; top: 14%; width: 140px; height: 140px; animation: float 5s ease-in-out infinite; }
+  .hero-obj-secondary { right: 12%; top: 4%; width: 128px; height: 128px; animation: float-slow 4.4s ease-in-out infinite 0.4s; }
+  .hero-obj-tertiary { right: -2%; bottom: 8%; width: 128px; height: 128px; animation: float 4.8s ease-in-out infinite 0.9s; }
+
+  .hero-accent { position: absolute; width: 26px; height: 26px; animation: float 3.6s ease-in-out infinite; z-index: 1; }
+  .hero-accent-a { left: 4%; bottom: 12%; }
+  .hero-accent-b { left: 44%; top: 4%; width: 20px; height: 20px; }
+  .hero-accent-c { left: 38%; bottom: 2%; }
+  .hero-accent-d { right: 30%; top: 2%; width: 20px; height: 20px; }
 }
 
 /* --- Buttons --- */
@@ -208,7 +230,11 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
 .feature-card {
   border-radius: var(--radius-lg);
   padding: 22px;
+  padding-right: 108px;
   text-align: left;
+  position: relative;
+  overflow: hidden;
+  min-height: 132px;
 }
 .feature-card-icon {
   width: 44px;
@@ -223,6 +249,18 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
 .feature-card-icon svg { width: 22px; height: 22px; }
 .feature-card-title { font-weight: 800; font-size: 18px; margin: 0 0 4px; }
 .feature-card-desc { font-size: 14px; opacity: 0.75; margin: 0; }
+.feature-card-illustration {
+  position: absolute;
+  right: -12px;
+  bottom: -12px;
+  width: 128px;
+  height: 128px;
+  opacity: 0.95;
+}
+@media (max-width: 380px) {
+  .feature-card { padding-right: 22px; }
+  .feature-card-illustration { position: static; width: 90px; height: 90px; margin-top: 8px; opacity: 0.9; }
+}
 
 /* --- CareDrop type picker --- */
 .type-grid { display: flex; flex-direction: column; gap: 10px; }

@@ -136,3 +136,45 @@ export function SendIcon({ className, style }: { className?: string; style?: CSS
     </svg>
   );
 }
+
+export function PolaroidStack({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg viewBox="0 0 160 160" className={className} style={style} aria-hidden="true">
+      <g transform="rotate(-8 70 90)">
+        <rect x="30" y="50" width="80" height="92" rx="6" fill="#FFFFFF" stroke="var(--color-border)" />
+        <rect x="38" y="58" width="64" height="58" rx="3" fill="var(--color-sky-soft)" />
+        <circle cx="70" cy="87" r="16" fill="var(--color-gold)" opacity="0.8" />
+      </g>
+      <g transform="rotate(7 90 90)">
+        <rect x="55" y="35" width="80" height="92" rx="6" fill="#FFFFFF" stroke="var(--color-border)" />
+        <rect x="63" y="43" width="64" height="58" rx="3" fill="var(--color-accent-soft)" />
+        <path d="M67 90 L88 68 L100 82 L114 66 L123 100 Z" fill="var(--color-accent)" opacity="0.85" />
+      </g>
+    </svg>
+  );
+}
+
+export function TicketPopcorn({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg viewBox="0 0 160 160" className={className} style={style} aria-hidden="true">
+      <g transform="rotate(-6 60 90)">
+        <rect x="20" y="60" width="90" height="52" rx="8" fill="var(--color-secondary-soft)" stroke="var(--color-secondary)" strokeOpacity="0.3" />
+        <circle cx="20" cy="86" r="6" fill="var(--color-bg)" />
+        <circle cx="110" cy="86" r="6" fill="var(--color-bg)" />
+        <path d="M42 68 L42 104 M64 68 L64 104 M86 68 L86 104" stroke="var(--color-secondary)" strokeOpacity="0.35" strokeDasharray="3 4" />
+      </g>
+      <g transform="translate(70,30)">
+        <path d="M8 40 L14 100 L58 100 L64 40 Z" fill="var(--color-error)" />
+        <path d="M4 40 L68 40 L62 22 L10 22 Z" fill="#FFFFFF" />
+      </g>
+    </svg>
+  );
+}
+
+export function Blob({ className, color = 'var(--color-accent-soft)' }: { className?: string; color?: string }) {
+  return (
+    <svg viewBox="0 0 200 200" className={className} aria-hidden="true">
+      <path d="M60 20C100 0 160 20 180 60C200 100 180 150 140 175C100 200 40 190 20 150C0 110 20 40 60 20Z" fill={color} />
+    </svg>
+  );
+}

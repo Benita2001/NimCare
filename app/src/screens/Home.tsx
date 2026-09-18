@@ -3,7 +3,7 @@ import type React from 'react';
 import { useSession } from '../sessionContext';
 import { api, type CareDropType } from '../api/client';
 import { shortenAddress } from '../lib/luna';
-import { EnvelopeCharacter, MusicCharacter, MovieCharacter, PhotoIcon, MusicIcon, MovieIcon, GiftIcon } from '../components/Illustrations';
+import { EnvelopeCharacter, MusicCharacter, MovieCharacter, PolaroidStack, Sparkle, HeartAccent, Blob, PhotoIcon, MusicIcon, MovieIcon, GiftIcon } from '../components/Illustrations';
 
 const TYPE_ICON_CLASS: Record<string, string> = {
   PHOTO: 'type-card-photo',
@@ -64,18 +64,24 @@ export function HomeScreen({
 
       <div className="hero-shell">
         <div className="hero-cluster hero-cluster-left">
-          <EnvelopeCharacter className="hero-char hero-char-main" />
+          <Blob className="hero-blob hero-blob-1" color="var(--color-accent-soft)" />
+          <Blob className="hero-blob hero-blob-4" color="var(--color-gold-soft)" />
+          <PolaroidStack className="hero-obj hero-obj-main" />
+          <HeartAccent className="hero-accent hero-accent-a" />
         </div>
 
         <div className="hero-center">
-          <div className="hero-mobile-char"><EnvelopeCharacter className="hero-char" /></div>
+          <div className="hero-envelope"><EnvelopeCharacter className="hero-char" /></div>
           <h1>Make their day.</h1>
           <p className="subtitle">Send a moment, not just money.</p>
         </div>
 
         <div className="hero-cluster hero-cluster-right">
-          <MusicCharacter className="hero-char hero-char-secondary" />
-          <MovieCharacter className="hero-char hero-char-tertiary" />
+          <Blob className="hero-blob hero-blob-3" color="var(--color-sky-soft)" />
+          <Blob className="hero-blob hero-blob-2" color="var(--color-green-soft)" />
+          <MusicCharacter className="hero-char hero-obj hero-obj-secondary" />
+          <MovieCharacter className="hero-char hero-obj hero-obj-tertiary" />
+          <Sparkle className="hero-accent hero-accent-d" color="var(--color-sky)" />
         </div>
       </div>
 

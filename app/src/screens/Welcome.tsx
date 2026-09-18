@@ -1,6 +1,6 @@
 import { useSession } from '../sessionContext';
 import { buildNimiqPayOpenLinks } from '../nimiq/deeplink';
-import { EnvelopeCharacter, MusicCharacter, MovieCharacter, Sparkle, HeartAccent, PhotoIcon, MusicIcon, MovieIcon, SendIcon } from '../components/Illustrations';
+import { EnvelopeCharacter, MusicCharacter, MovieCharacter, PolaroidStack, TicketPopcorn, Sparkle, HeartAccent, Blob, SendIcon } from '../components/Illustrations';
 
 const ERROR_COPY: Record<string, string> = {
   PermissionDenied: 'Wallet access was declined. You can try again anytime.',
@@ -21,7 +21,7 @@ export function WelcomeScreen() {
     const nimiqPayLink = buildNimiqPayOpenLinks(window.location.origin).https;
     return (
       <div className="screen screen-center">
-        <div className="hero-mobile-char"><EnvelopeCharacter className="hero-char" /></div>
+        <div className="hero-envelope"><EnvelopeCharacter className="hero-char" /></div>
         <h1>Open NimCare in Nimiq Pay</h1>
         <p className="subtitle">NimCare only works inside the Nimiq Pay app, where it can access your wallet.</p>
         <a className="btn btn-primary" href={nimiqPayLink} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
@@ -50,13 +50,15 @@ export function WelcomeScreen() {
 
       <div className="hero-shell">
         <div className="hero-cluster hero-cluster-left">
-          <EnvelopeCharacter className="hero-char hero-char-main" />
-          <Sparkle className="hero-accent hero-accent-a" />
-          <HeartAccent className="hero-accent hero-accent-b" />
+          <Blob className="hero-blob hero-blob-1" color="var(--color-accent-soft)" />
+          <Blob className="hero-blob hero-blob-4" color="var(--color-gold-soft)" />
+          <PolaroidStack className="hero-obj hero-obj-main" />
+          <HeartAccent className="hero-accent hero-accent-a" />
+          <Sparkle className="hero-accent hero-accent-c" />
         </div>
 
         <div className="hero-center">
-          <div className="hero-mobile-char"><EnvelopeCharacter className="hero-char" /></div>
+          <div className="hero-envelope"><EnvelopeCharacter className="hero-char" /></div>
 
           <p className="eyebrow" style={{ color: 'var(--color-accent)' }}>NIMCARE</p>
           <h1>Send a moment,<br />not just money.</h1>
@@ -84,9 +86,11 @@ export function WelcomeScreen() {
         </div>
 
         <div className="hero-cluster hero-cluster-right">
-          <MusicCharacter className="hero-char hero-char-secondary" />
-          <MovieCharacter className="hero-char hero-char-tertiary" />
-          <Sparkle className="hero-accent hero-accent-c" color="var(--color-sky)" />
+          <Blob className="hero-blob hero-blob-3" color="var(--color-sky-soft)" />
+          <Blob className="hero-blob hero-blob-2" color="var(--color-green-soft)" />
+          <MusicCharacter className="hero-char hero-obj hero-obj-secondary" />
+          <MovieCharacter className="hero-char hero-obj hero-obj-tertiary" />
+          <Sparkle className="hero-accent hero-accent-d" color="var(--color-sky)" />
         </div>
       </div>
 
@@ -99,19 +103,19 @@ export function WelcomeScreen() {
 
         <div className="feature-grid">
           <div className="feature-card" style={{ background: 'var(--color-accent-soft)' }}>
-            <span className="feature-card-icon" style={{ color: 'var(--color-accent)' }}><PhotoIcon /></span>
             <p className="feature-card-title">I was thinking of you</p>
             <p className="feature-card-desc">Send a photo, a little note and something extra.</p>
+            <PolaroidStack className="feature-card-illustration" />
           </div>
           <div className="feature-card" style={{ background: 'var(--color-sky-soft)' }}>
-            <span className="feature-card-icon" style={{ color: 'var(--color-sky)' }}><MusicIcon /></span>
             <p className="feature-card-title">This made me think of you</p>
             <p className="feature-card-desc">Share a song or playlist with a little NIM attached.</p>
+            <MusicCharacter className="feature-card-illustration" />
           </div>
           <div className="feature-card" style={{ background: 'var(--color-gold-soft)' }}>
-            <span className="feature-card-icon" style={{ color: '#B8862F' }}><MovieIcon /></span>
             <p className="feature-card-title">Movie on me</p>
             <p className="feature-card-desc">Turn a small gift into movie night.</p>
+            <TicketPopcorn className="feature-card-illustration" />
           </div>
         </div>
 
