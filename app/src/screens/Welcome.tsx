@@ -1,7 +1,7 @@
-import { useSession } from '../session';
+import { useSession } from '../sessionContext';
+import { buildNimiqPayOpenLinks } from '../nimiq/deeplink';
 
 const ERROR_COPY: Record<string, string> = {
-  ProviderUnavailable: 'Open NimCare inside Nimiq Pay to connect your wallet.',
   PermissionDenied: 'Wallet access was declined. You can try again anytime.',
   ConsensusNotEstablished: 'Your wallet is still syncing with the network.',
   NoAccounts: 'No wallet account was found in Nimiq Pay.',
@@ -11,6 +11,25 @@ const ERROR_COPY: Record<string, string> = {
 
 export function WelcomeScreen() {
   const { connect, status, errorKind, errorMessage } = useSession();
+
+  // Outside Nimiq Pay, listAccounts() can never succeed — this is a real,
+  // permanent condition (not a transient error), so it gets its own
+  // conversion screen with a genuine "open in Nimiq Pay" action rather than
+  // being lumped in with retryable errors.
+  if (errorKind === 'ProviderUnavailable') {
+    const nimiqPayLink = buildNimiqPayOpenLinks(window.location.origin).https;
+    return (
+      <div className="screen screen-center">
+        <div className="brand-mark">💛</div>
+        <h1>Open NimCare in Nimiq Pay</h1>
+        <p className="subtitle">NimCare only works inside the Nimiq Pay app, where it can access your wallet.</p>
+        <a className="btn btn-primary" href={nimiqPayLink} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+          Open in Nimiq Pay
+        </a>
+        <button className="btn btn-ghost" onClick={connect}>I'm already in Nimiq Pay — try again</button>
+      </div>
+    );
+  }
 
   return (
     <div className="screen screen-center">

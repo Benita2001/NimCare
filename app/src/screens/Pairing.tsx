@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useSession } from '../session';
+import { useSession } from '../sessionContext';
 import { api } from '../api/client';
+import { buildNimiqPayOpenLinks, inviteTargetUrl } from '../nimiq/deeplink';
 
 export function CreateInviteScreen({ onBack, onCreated }: { onBack: () => void; onCreated: (pairId: string) => void }) {
   const { sessionToken } = useSession();
@@ -20,7 +21,8 @@ export function CreateInviteScreen({ onBack, onCreated }: { onBack: () => void; 
     }
   };
 
-  const inviteLink = invite ? `${window.location.origin}/?invite=${invite.token}` : '';
+  const inviteLink = invite ? inviteTargetUrl(invite.token) : '';
+  const nimiqPayLink = invite ? buildNimiqPayOpenLinks(inviteLink).https : '';
 
   return (
     <div className="screen">
@@ -48,10 +50,13 @@ export function CreateInviteScreen({ onBack, onCreated }: { onBack: () => void; 
 
       {invite && (
         <div className="invite-share">
-          <p>Send this link to them:</p>
+          <p>Send this link to them — tapping it on their phone opens NimCare inside Nimiq Pay:</p>
+          <a className="btn btn-primary" href={nimiqPayLink} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+            Open in Nimiq Pay
+          </a>
           <div className="invite-link">{inviteLink}</div>
           <button
-            className="btn btn-primary"
+            className="btn btn-ghost"
             onClick={async () => {
               await navigator.clipboard.writeText(inviteLink).catch(() => {});
               setCopied(true);
@@ -59,6 +64,11 @@ export function CreateInviteScreen({ onBack, onCreated }: { onBack: () => void; 
           >
             {copied ? 'Copied!' : 'Copy link'}
           </button>
+          <p className="hint">
+            If the link doesn't carry the invite through, they can also just open NimCare in Nimiq Pay and enter this
+            code:
+          </p>
+          <div className="invite-link">{invite.token}</div>
           <p className="hint">Waiting for them to accept…</p>
           <button className="btn btn-ghost" onClick={() => onCreated(invite.pairId)}>Continue to Home</button>
         </div>

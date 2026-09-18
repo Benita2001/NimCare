@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { SessionProvider, useSession } from './session';
+import { SessionProvider } from './session';
+import { useSession } from './sessionContext';
 import { WelcomeScreen } from './screens/Welcome';
 import { HomeScreen } from './screens/Home';
 import { CreateInviteScreen, AcceptInviteScreen } from './screens/Pairing';
@@ -32,6 +33,7 @@ function Router() {
         <HomeScreen
           onCreateInvite={() => setRoute({ name: 'createInvite' })}
           onOpenPair={(pairId) => setRoute({ name: 'pair', pairId })}
+          onAcceptInviteCode={(token) => setRoute({ name: 'acceptInvite', inviteToken: token })}
         />
       );
     case 'createInvite':

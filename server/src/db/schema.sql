@@ -15,8 +15,10 @@ CREATE TABLE IF NOT EXISTS auth_nonce (
   consumed_at TEXT
 );
 
+-- Only a SHA-256 hash of each opaque session token is stored (see auth.ts) —
+-- the plaintext token is never persisted, so a DB read cannot impersonate a session.
 CREATE TABLE IF NOT EXISTS session (
-  token TEXT PRIMARY KEY,
+  token_hash TEXT PRIMARY KEY,
   address TEXT NOT NULL,
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL
@@ -51,10 +53,11 @@ CREATE TABLE IF NOT EXISTS caredrop (
   prompt_text TEXT NOT NULL,
   amount_luna INTEGER NOT NULL CHECK (amount_luna > 0),
   sealed_note TEXT NOT NULL,
+  reference TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN
     ('DRAFT','AWAITING_PAYMENT','PAYMENT_SUBMITTED','PAYMENT_VERIFIED','DELIVERED','COMPLETED','FAILED')),
   failure_reason TEXT,
-  transaction_hash TEXT,
+  transaction_hash TEXT UNIQUE,
   blockchain_verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED'
     CHECK (blockchain_verification_status IN ('UNVERIFIED','PENDING','VERIFIED','MISMATCH','RPC_UNAVAILABLE')),
   created_at TEXT NOT NULL,

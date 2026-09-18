@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { connectWallet, signMessage } from './nimiq/provider';
 import { api } from './api/client';
+import { SessionContext } from './sessionContext';
 
 interface SessionState {
   address: string | null;
@@ -9,12 +10,6 @@ interface SessionState {
   errorKind: string | null;
   errorMessage: string | null;
 }
-
-interface SessionContextValue extends SessionState {
-  connect: () => Promise<void>;
-}
-
-const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SessionState>({
@@ -64,10 +59,4 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return <SessionContext.Provider value={{ ...state, connect }}>{children}</SessionContext.Provider>;
-}
-
-export function useSession() {
-  const ctx = useContext(SessionContext);
-  if (!ctx) throw new Error('useSession must be used within SessionProvider');
-  return ctx;
 }

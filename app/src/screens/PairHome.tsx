@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSession } from '../session';
+import { useSession } from '../sessionContext';
 import { api } from '../api/client';
 import { lunaToNim, shortenAddress } from '../lib/luna';
 

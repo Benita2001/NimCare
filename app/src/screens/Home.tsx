@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useSession } from '../session';
+import { useSession } from '../sessionContext';
 import { api } from '../api/client';
 import { shortenAddress } from '../lib/luna';
 
 export function HomeScreen({
   onCreateInvite,
   onOpenPair,
+  onAcceptInviteCode,
 }: {
   onCreateInvite: () => void;
   onOpenPair: (pairId: string) => void;
+  onAcceptInviteCode: (token: string) => void;
 }) {
   const { address, sessionToken } = useSession();
   const [pairs, setPairs] = useState<any[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState('');
 
   useEffect(() => {
     if (!sessionToken) return;
@@ -52,6 +55,19 @@ export function HomeScreen({
           <button className="btn btn-ghost" onClick={onCreateInvite}>+ Start another Loop</button>
         </div>
       )}
+
+      <div className="invite-code-entry">
+        <label className="field-label">Have an invite code?</label>
+        <input
+          className="input"
+          placeholder="Paste invite code…"
+          value={inviteCode}
+          onChange={(e) => setInviteCode(e.target.value)}
+        />
+        <button className="btn btn-ghost" disabled={!inviteCode.trim()} onClick={() => onAcceptInviteCode(inviteCode.trim())}>
+          Accept invite
+        </button>
+      </div>
     </div>
   );
 }

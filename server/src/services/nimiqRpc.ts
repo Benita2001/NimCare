@@ -25,6 +25,16 @@ export interface TransactionInfo {
   validityStartHeight: number;
   proof: string;
   networkId: number;
+  /**
+   * NOT present in @nimiq/mini-app-sdk's bundled TransactionInfo type, but
+   * confirmed present on a real live response from rpc.nimiqwatch.com
+   * during this hardening pass (2026-09-18) — see MEMORY.md. Whether the
+   * transaction's on-chain logic executed successfully (relevant for
+   * staking/contract-flagged transactions; may be absent on plain basic
+   * transfers). Optional here because its presence isn't guaranteed for
+   * every transaction type.
+   */
+  executionResult?: boolean;
 }
 
 export class NimiqRpcUnavailableError extends Error {}

@@ -41,28 +41,45 @@ caredropsRouter.post('/', requireSession, (req: any, res) => {
   if (!recipientWallet) return res.status(400).json({ error: 'pair_has_no_recipient' });
 
   const id = randomUUID();
+  const reference = shortRef(id);
   const now = new Date().toISOString();
   db.prepare(
     `INSERT INTO caredrop
-      (id, pair_id, sender_wallet, recipient_wallet, prompt_id, prompt_text, amount_luna, sealed_note, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AWAITING_PAYMENT', ?)`,
-  ).run(id, pairId, req.walletAddress, recipientWallet, promptId ?? null, promptText, amountLuna, sealedNote, now);
+      (id, pair_id, sender_wallet, recipient_wallet, prompt_id, prompt_text, amount_luna, sealed_note, reference, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AWAITING_PAYMENT', ?)`,
+  ).run(id, pairId, req.walletAddress, recipientWallet, promptId ?? null, promptText, amountLuna, sealedNote, reference, now);
 
-  res.json({ id, recipient: recipientWallet, amountLuna, reference: shortRef(id) });
+  res.json({ id, recipient: recipientWallet, amountLuna, reference });
 });
 
 caredropsRouter.post('/:id/submit', requireSession, async (req: any, res) => {
   const { txHash } = req.body ?? {};
-  if (!txHash) return res.status(400).json({ error: 'missing_tx_hash' });
+  if (!txHash || typeof txHash !== 'string') return res.status(400).json({ error: 'missing_tx_hash' });
 
   const drop = db.prepare(`SELECT * FROM caredrop WHERE id = ?`).get(req.params.id) as any;
   if (!drop) return res.status(404).json({ error: 'caredrop_not_found' });
   if (drop.sender_wallet !== req.walletAddress) return res.status(403).json({ error: 'not_the_sender' });
   if (drop.status !== 'AWAITING_PAYMENT') return res.status(400).json({ error: 'invalid_state_transition' });
 
-  db.prepare(
-    `UPDATE caredrop SET status = 'PAYMENT_SUBMITTED', transaction_hash = ?, blockchain_verification_status = 'PENDING' WHERE id = ?`,
-  ).run(txHash, drop.id);
+  // A transaction hash may only ever back one CareDrop — otherwise the same
+  // on-chain payment could be replayed to "fund" a second CareDrop.
+  const existing = db.prepare(`SELECT id FROM caredrop WHERE transaction_hash = ?`).get(txHash) as
+    | { id: string }
+    | undefined;
+  if (existing && existing.id !== drop.id) {
+    return res.status(409).json({ error: 'transaction_hash_already_used' });
+  }
+
+  try {
+    db.prepare(
+      `UPDATE caredrop SET status = 'PAYMENT_SUBMITTED', transaction_hash = ?, blockchain_verification_status = 'PENDING' WHERE id = ?`,
+    ).run(txHash, drop.id);
+  } catch (err: any) {
+    if (String(err?.message ?? '').includes('UNIQUE')) {
+      return res.status(409).json({ error: 'transaction_hash_already_used' });
+    }
+    throw err;
+  }
 
   res.json({ id: drop.id, status: 'PAYMENT_SUBMITTED' });
 });
