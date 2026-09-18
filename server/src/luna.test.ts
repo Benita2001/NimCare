@@ -15,6 +15,13 @@ describe('luna conversion', () => {
     expect(Number.isInteger(nimToLuna('0.5'))).toBe(true);
   });
 
+  // 2026-09-18 differential hotfix: the smallest real-device test used
+  // 0.00001 NIM — must be exactly 1 Luna, never a stale/previous amount.
+  it('converts 0.00001 NIM to exactly 1 Luna', () => {
+    expect(nimToLuna('0.00001')).toBe(1);
+    expect(Number.isInteger(nimToLuna('0.00001'))).toBe(true);
+  });
+
   it('round-trips', () => {
     expect(lunaToNim(nimToLuna('0.1'))).toBe('0.1');
     expect(lunaToNim(nimToLuna('2.5'))).toBe('2.5');

@@ -124,6 +124,17 @@ Triggered by a real on-device report inside Nimiq Pay: past the blank-screen fix
 - **NIM-071** [DONE] Added a temporary diagnostic screen (`app/src/screens/TxDiagnostic.tsx`, reachable only via `?diag=tx`, never linked from navigation) to isolate `sendBasicTransaction()` vs `sendBasicTransactionWithData()` on the real device. Must be removed once the retest identifies the cause.
 - **NIM-072** [TODO — blocking] Real device retest not yet performed. `internal_error`'s exact root cause is not yet confirmed — only two real, independent contributing-cause candidates were found and fixed (error misclassification hiding the true cause; unchecked address checksum). Status: `TRANSACTION DIAGNOSTICS: PASS` / `REAL DEVICE TRANSACTION: UNVERIFIED`.
 
+## Phase 13 — Differential Fix: Normal CareDrop internal_error (2026-09-18)
+
+Triggered by decisive real-device evidence: Test A (`sendBasicTransaction`) and Test B (`sendBasicTransactionWithData` + arbitrary data) both passed with real tx hashes on the exact same wallet/network/provider, while the normal CareDrop flow still failed with `internal_error` even at 1 Luna — isolating the bug to a payload difference, not the provider/network/balance.
+
+- **NIM-073** [DONE] Found and fixed the confirmed root cause: `Composer.tsx` sent the raw, un-canonicalized local `recipient` to the wallet provider instead of the server-validated `drop.recipient` echo. Now always uses `createdDrop.recipient`.
+- **NIM-074** [DONE] Replaced whitespace-collapse-only `normalizeAddress()` with real `@nimiq/core` canonicalization (`Address.fromUserFriendlyAddress(...).toUserFriendlyAddress()`). Verified: compact, padded, and irregularly-grouped representations of the same address all canonicalize identically.
+- **NIM-075** [DONE] Fixed a real, independent bug found while here: "Try again" previously created a brand-new CareDrop row (fresh id/reference) on every retry instead of reusing the one that failed to pay. `retry()` now reuses the same already-created drop; still always an explicit human tap.
+- **NIM-076** [DONE] Added payload diagnostics (actual recipient value, amount, reference, byte length, invisible/nonstandard character detection) and a temporary collapsible debug section on payment failure in `Composer.tsx`.
+- **NIM-077** [DONE] Added Test C to `TxDiagnosticScreen`: `sendBasicTransactionWithData` using the exact normal-CareDrop reference format, to distinguish "any attached data fails" from "this specific reference format fails."
+- **NIM-078** [TODO — blocking] Real device retest (including Test C) not yet performed. The raw-recipient bug is a confirmed, real defect regardless of whether it's proven to be the sole cause of `internal_error`.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

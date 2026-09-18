@@ -128,6 +128,38 @@ describe('pairing + caredrop + authorization (2026-09-18 pivot: surprise-first, 
     expect(loopsA.body.pairs[0].relationship_type).toBeFalsy();
   });
 
+  it('echoes a canonical recipient address and an unchanged numeric amount, regardless of input spacing — the 2026-09-18 differential hotfix', { timeout: 20000 }, async () => {
+    // Real device evidence: the same wallet/network/provider succeeded via
+    // a manually-entered address but failed through the normal CareDrop
+    // flow, which previously sent the client's raw (un-canonicalized)
+    // input to the wallet instead of the server's validated echo. This
+    // proves POST /api/caredrops always returns a canonical, properly-
+    // grouped `recipient` — the value Composer.tsx must use for payment —
+    // no matter how irregularly the caller's address was spaced.
+    const a = KeyPair.generate();
+    const b = KeyPair.generate();
+    const { verifyRes: aLogin } = await loginWallet(a);
+    const { address: addressB } = await loginWallet(b);
+    const tokenA = aLogin.body.sessionToken;
+
+    const compact = addressB.replace(/\s+/g, '');
+    const irregularlySpaced = compact.replace(/(.{5})/g, '$1 ').trim();
+    expect(irregularlySpaced).not.toBe(addressB);
+
+    const drop = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: irregularlySpaced, type: 'TREAT', amountLuna: 1 });
+
+    expect(drop.status).toBe(200);
+    expect(drop.body.recipient).toBe(addressB);
+
+    // 0.00001 NIM -> exactly 1 Luna, unchanged through the whole
+    // request/response round trip — never a float, never a stale value.
+    expect(drop.body.amountLuna).toBe(1);
+    expect(Number.isInteger(drop.body.amountLuna)).toBe(true);
+  });
+
   it('excludes legacy PENDING pair rows (member_b_wallet still NULL) from /pairs/mine — the 2026-09-18 blank-screen hotfix', { timeout: 20000 }, async () => {
     // Reproduces the exact production incident: a stale pre-pivot invite row
     // (created by the old, now-unused invite/accept flow) with

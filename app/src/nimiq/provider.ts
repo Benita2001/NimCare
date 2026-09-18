@@ -83,6 +83,30 @@ function truncateSafe(s: string, max: number): string {
 }
 
 /**
+ * Detects non-breaking spaces, newlines/tabs, zero-width characters, and
+ * other Unicode whitespace/punctuation that a plain ASCII-space check
+ * would miss — any of which could reach the provider from a copy/paste
+ * (a chat app, a note-taking app, a wallet UI that renders addresses with
+ * NBSP) and plausibly cause the provider to reject a payload our own
+ * ASCII-focused checks see as clean. Detection only — never logs the
+ * actual string here, since the caller already logs the value itself.
+ */
+const INVISIBLE_OR_NONSTANDARD_CODEPOINTS = new Set([
+  0x00a0, // non-breaking space
+  0x200b, 0x200c, 0x200d, 0x200e, 0x200f, // zero-width / bidi marks
+  0x2028, 0x2029, // line/paragraph separator
+  0xfeff, // BOM / zero-width no-break space
+  0x09, 0x0d, 0x0a, // tab, CR, LF
+]);
+
+function hasInvisibleOrNonstandardChars(s: string): boolean {
+  for (const ch of s) {
+    if (INVISIBLE_OR_NONSTANDARD_CODEPOINTS.has(ch.codePointAt(0) ?? -1)) return true;
+  }
+  return false;
+}
+
+/**
  * Classifies a provider payment failure into a UI-safe kind + message,
  * regardless of whether it arrived as a resolved `ErrorResponse` (the SDK's
  * documented shape: `{ error: { type, message } }`) or a thrown JS error.
@@ -178,12 +202,21 @@ export async function sendCareDropPayment(params: {
     // checksum-verifying parser before creating the CareDrop (see
     // server/src/nimiqAddress.ts) — createCareDrop() is always awaited
     // before this function is called, so a checksum-invalid address never
-    // reaches this point. This marker just confirms that invariant held.
-    markStage('PAYMENT:recipient-valid');
+    // reaches this point. The exact value (not just "valid") is logged
+    // here — it's a public wallet address, not sensitive — because the
+    // 2026-09-18 differential hotfix needs to compare this exact payload
+    // against the real-device diagnostic tests' payloads byte for byte.
+    markStage(`PAYMENT:recipient:${params.recipient}`);
+    if (hasInvisibleOrNonstandardChars(params.recipient)) {
+      markStage('PAYMENT:recipient:contains-invisible-chars');
+    }
     markStage(`PAYMENT:value-luna:${params.amountLuna}`);
 
     const dataBytes = new TextEncoder().encode(params.reference).length;
     markStage(`PAYMENT:data-bytes:${dataBytes}`);
+    if (hasInvisibleOrNonstandardChars(params.reference)) {
+      markStage('PAYMENT:reference:contains-invisible-chars');
+    }
     if (dataBytes > MAX_REFERENCE_BYTES) {
       return {
         ok: false,

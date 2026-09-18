@@ -2,9 +2,20 @@ import { useEffect, useState } from 'react';
 import { useSession } from '../sessionContext';
 import { api, type CareDropType } from '../api/client';
 import { nimToLuna, lunaToNim, shortenAddress } from '../lib/luna';
-import { sendCareDropPayment } from '../nimiq/provider';
+import { sendCareDropPayment, type PaymentErrorKind } from '../nimiq/provider';
 
 type Step = 'content' | 'recipient' | 'amount' | 'review' | 'sending' | 'error';
+
+type CreatedDrop = { id: string; recipient: string; amountLuna: number; reference: string; shareToken: string };
+
+type PaymentDebugInfo = {
+  recipient: string;
+  amountLuna: number;
+  reference: string;
+  referenceBytes: number;
+  errorType: PaymentErrorKind;
+  errorMessage: string;
+};
 
 const AMOUNT_PRESETS = ['0.1', '0.5', '1', '2'];
 
@@ -24,6 +35,8 @@ export function ComposerScreen({
   const { address, sessionToken } = useSession();
   const [step, setStep] = useState<Step>('content');
   const [error, setError] = useState<string | null>(null);
+  const [drop, setDrop] = useState<CreatedDrop | null>(null);
+  const [debugInfo, setDebugInfo] = useState<PaymentDebugInfo | null>(null);
 
   // content
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -52,10 +65,55 @@ export function ComposerScreen({
 
   const recipient = recipientWallet || customAddress.trim();
 
+  /**
+   * Sends payment for an already-created CareDrop. Always uses the
+   * server-returned `createdDrop.recipient` — the canonical, validated
+   * address @nimiq/core normalized it to — never the raw local `recipient`
+   * the user typed/selected. Reusing raw client input here (rather than
+   * the server's authoritative echo) was the confirmed cause of the
+   * differential internal_error: a real device test proved the exact same
+   * wallet/network/provider succeeds with a manually-entered address but
+   * failed through this path when it reused un-canonicalized input. See
+   * MEMORY.md 2026-09-18 differential hotfix.
+   */
+  const attemptPayment = async (createdDrop: CreatedDrop) => {
+    if (!sessionToken) return;
+    setStep('sending');
+    setError(null);
+    setDebugInfo(null);
+    try {
+      const payment = await sendCareDropPayment({
+        recipient: createdDrop.recipient,
+        amountLuna: createdDrop.amountLuna,
+        reference: createdDrop.reference,
+      });
+      if (!payment.ok) {
+        setError(payment.message);
+        setDebugInfo({
+          recipient: createdDrop.recipient,
+          amountLuna: createdDrop.amountLuna,
+          reference: createdDrop.reference,
+          referenceBytes: new TextEncoder().encode(createdDrop.reference).length,
+          errorType: payment.kind,
+          errorMessage: payment.message,
+        });
+        setStep('error');
+        return;
+      }
+
+      await api.submitPayment(createdDrop.id, payment.value, sessionToken);
+      onCreated({ shareToken: createdDrop.shareToken, id: createdDrop.id });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong sending your CareDrop.');
+      setStep('error');
+    }
+  };
+
   const create = async () => {
     if (!sessionToken) return;
     setStep('sending');
     setError(null);
+    setDebugInfo(null);
     try {
       let mediaUrl: string | undefined;
       let mediaMime: string | undefined;
@@ -66,7 +124,7 @@ export function ComposerScreen({
       }
 
       const amountLuna = nimToLuna(amount);
-      const drop = await api.createCareDrop(
+      const createdDrop = await api.createCareDrop(
         {
           recipientWallet: recipient,
           type,
@@ -79,19 +137,28 @@ export function ComposerScreen({
         },
         sessionToken,
       );
-
-      const payment = await sendCareDropPayment({ recipient, amountLuna: drop.amountLuna, reference: drop.reference });
-      if (!payment.ok) {
-        setError(payment.message);
-        setStep('error');
-        return;
-      }
-
-      await api.submitPayment(drop.id, payment.value, sessionToken);
-      onCreated({ shareToken: drop.shareToken, id: drop.id });
+      setDrop(createdDrop);
+      await attemptPayment(createdDrop);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong creating your CareDrop.');
       setStep('error');
+    }
+  };
+
+  /**
+   * "Try again" must never silently create a second CareDrop row for the
+   * same attempt (a fresh id/reference every retry) — it retries payment
+   * against the *same* already-created CareDrop. Only falls back to a
+   * fresh create() when creation itself never succeeded (drop is still
+   * null), since there is nothing yet to retry payment against. This is
+   * always an explicit human tap — never automatic. See MEMORY.md
+   * 2026-09-18 differential hotfix.
+   */
+  const retry = () => {
+    if (drop) {
+      attemptPayment(drop);
+    } else {
+      create();
     }
   };
 
@@ -111,8 +178,16 @@ export function ComposerScreen({
           <strong>Couldn't send it.</strong>
           <p>{error}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setStep('review')}>Try again</button>
+        <button className="btn btn-primary" onClick={retry}>Try again</button>
         <button className="btn btn-ghost" onClick={onBack}>Cancel</button>
+        {debugInfo && (
+          <details style={{ marginTop: 16, fontFamily: 'monospace', fontSize: 12 }}>
+            <summary>Payload diagnostics (temporary, dev-only)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {`Recipient:\n${debugInfo.recipient}\n\nValue:\n${debugInfo.amountLuna} Luna\n\nReference:\n${debugInfo.reference}\n\nReference bytes:\n${debugInfo.referenceBytes}\n\nError type:\n${debugInfo.errorType}\n\nError message:\n${debugInfo.errorMessage}`}
+            </pre>
+          </details>
+        )}
       </div>
     );
   }

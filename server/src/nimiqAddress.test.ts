@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { KeyPair } from '@nimiq/core';
-import { isValidNimiqAddress } from './nimiqAddress.js';
+import { isValidNimiqAddress, normalizeAddress } from './nimiqAddress.js';
 
 /**
  * 2026-09-18 transaction internal_error hotfix: address validation was
@@ -37,5 +37,35 @@ describe('isValidNimiqAddress (real @nimiq/core checksum validation)', () => {
     expect(isValidNimiqAddress(null)).toBe(false);
     expect(isValidNimiqAddress(undefined)).toBe(false);
     expect(isValidNimiqAddress(12345)).toBe(false);
+  });
+});
+
+/**
+ * 2026-09-18 differential hotfix: real device evidence proved the same
+ * wallet/network/provider succeeds via a manually-entered address but the
+ * normal CareDrop flow (which previously reused the raw, un-canonicalized
+ * client input rather than the server's normalized echo) still failed.
+ * normalizeAddress must produce the SAME canonical output regardless of
+ * the caller's original spacing — not just collapse whitespace.
+ */
+describe('normalizeAddress (canonical form via @nimiq/core)', () => {
+  it('produces the same canonical output for every equivalent representation', () => {
+    const canonical = KeyPair.generate().toAddress().toUserFriendlyAddress();
+    const compact = canonical.replace(/\s+/g, '');
+    const paddedWhitespace = `  ${canonical}  `;
+    const irregularlySpaced = compact.replace(/(.{5})/g, '$1 ').trim();
+
+    expect(normalizeAddress(canonical)).toBe(canonical);
+    expect(normalizeAddress(compact)).toBe(canonical);
+    expect(normalizeAddress(paddedWhitespace)).toBe(canonical);
+    expect(normalizeAddress(irregularlySpaced)).toBe(canonical);
+  });
+
+  it('throws on a checksum-invalid address rather than silently normalizing it', () => {
+    const genuine = KeyPair.generate().toAddress().toUserFriendlyAddress();
+    const parts = genuine.split(' ');
+    const last = parts[parts.length - 1];
+    parts[parts.length - 1] = (last[0] === 'A' ? 'B' : 'A') + last.slice(1);
+    expect(() => normalizeAddress(parts.join(' '))).toThrow();
   });
 });

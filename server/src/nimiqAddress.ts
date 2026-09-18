@@ -23,8 +23,24 @@ export function isValidNimiqAddress(address: unknown): address is string {
   }
 }
 
+/**
+ * Canonical user-friendly representation (proper 4-char grouping, e.g.
+ * "NQ07 0000 0000 ..."), derived via @nimiq/core's own parser rather than
+ * whitespace-collapsing the caller's original spacing.
+ *
+ * 2026-09-18 differential hotfix: the previous whitespace-only
+ * normalization preserved whatever grouping the caller happened to submit
+ * — any correctly-ordered, checksum-valid character sequence parses
+ * successfully via @nimiq/core regardless of where its spaces are, but an
+ * irregularly-grouped (though semantically valid) string is not
+ * necessarily what Nimiq Pay's own native side expects when handed
+ * straight to `sendBasicTransactionWithData`. Always call this only after
+ * `isValidNimiqAddress` has confirmed the input parses — it throws on
+ * invalid input, by design, since every caller in this codebase already
+ * guards on that check first.
+ */
 export function normalizeAddress(address: string): string {
-  return address.trim().toUpperCase().replace(/\s+/g, ' ');
+  return Address.fromUserFriendlyAddress(address.trim().toUpperCase()).toUserFriendlyAddress();
 }
 
 export function shortenAddress(address: string): string {
