@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { buildNimiqPayOpenLinks, careDropTargetUrl } from '../nimiq/deeplink';
+import { EnvelopeCharacter } from '../components/Illustrations';
 
 export function ShareSuccessScreen({ shareToken, onDone }: { shareToken: string; onDone: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -22,7 +23,7 @@ export function ShareSuccessScreen({ shareToken, onDone }: { shareToken: string;
   return (
     <div className="screen">
       <div className="success-hero">
-        <div className="success-icon">💌</div>
+        <div className="success-icon"><EnvelopeCharacter /></div>
         <h1>Your CareDrop is ready.</h1>
         <p className="subtitle">Send it when the moment feels right.</p>
       </div>

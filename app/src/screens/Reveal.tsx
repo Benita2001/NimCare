@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import type React from 'react';
 import { useSession } from '../sessionContext';
 import { api, type CareDrop } from '../api/client';
 import { lunaToNim } from '../lib/luna';
+import { EnvelopeCharacter, PhotoIcon, MusicIcon, MovieIcon, GiftIcon } from '../components/Illustrations';
 
 const STATUS_COPY: Record<string, string> = {
   AWAITING_PAYMENT: 'Waiting for wallet approval…',
@@ -12,7 +14,12 @@ const STATUS_COPY: Record<string, string> = {
   FAILED: 'This CareDrop could not be verified.',
 };
 
-const TYPE_EMOJI: Record<string, string> = { PHOTO: '📸', PLAYLIST: '🎵', MOVIE: '🍿', TREAT: '☕' };
+const TYPE_ICON: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  PHOTO: PhotoIcon,
+  PLAYLIST: MusicIcon,
+  MOVIE: MovieIcon,
+  TREAT: GiftIcon,
+};
 
 export function CareDropScreen({
   caredropId,
@@ -56,7 +63,7 @@ export function CareDropScreen({
   if (shareToken && !teaserOpened) {
     return (
       <div className="screen screen-center">
-        <div className="success-icon">💌</div>
+        <div className="success-icon"><EnvelopeCharacter /></div>
         <h1>A CareDrop found you.</h1>
         <button className="btn btn-primary" onClick={() => setTeaserOpened(true)}>Open surprise</button>
       </div>
@@ -108,18 +115,21 @@ export function CareDropScreen({
           <div className="reveal-media-card">
             {drop.type === 'PHOTO' && drop.mediaUrl && <img src={drop.mediaUrl} alt="" />}
             <div className="reveal-media-body">
-              <p className="reveal-headline">{TYPE_EMOJI[drop.type]} {drop.title}</p>
+              <p className="reveal-headline" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {(() => { const Icon = TYPE_ICON[drop.type] ?? GiftIcon; return <Icon style={{ width: 22, height: 22, flexShrink: 0 }} />; })()}
+                {drop.title}
+              </p>
               {drop.caption && <p className="prompt-text">{drop.caption}</p>}
               {(drop.type === 'PLAYLIST' || drop.type === 'MOVIE') && drop.externalUrl && (
                 <div className="external-card">
-                  <span style={{ fontSize: 24 }}>{TYPE_EMOJI[drop.type]}</span>
+                  {(() => { const Icon = TYPE_ICON[drop.type] ?? GiftIcon; return <Icon style={{ width: 22, height: 22, flexShrink: 0 }} />; })()}
                   <a href={drop.externalUrl} target="_blank" rel="noreferrer">
                     Open {drop.externalProvider ?? 'link'}
                   </a>
                 </div>
               )}
               <p style={{ marginTop: 12 }}>
-                <span className="gift-pill">🎁 {lunaToNim(drop.amountLuna)} NIM</span>
+                <span className="gift-pill"><GiftIcon style={{ width: 16, height: 16 }} /> {lunaToNim(drop.amountLuna)} NIM</span>
               </p>
             </div>
           </div>

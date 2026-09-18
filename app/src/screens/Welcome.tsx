@@ -1,6 +1,6 @@
 import { useSession } from '../sessionContext';
 import { buildNimiqPayOpenLinks } from '../nimiq/deeplink';
-import { EnvelopeCharacter, MusicCharacter, MovieCharacter, Sparkle, HeartAccent } from '../components/Illustrations';
+import { EnvelopeCharacter, MusicCharacter, MovieCharacter, Sparkle, HeartAccent, PhotoIcon, MusicIcon, MovieIcon, SendIcon } from '../components/Illustrations';
 
 const ERROR_COPY: Record<string, string> = {
   PermissionDenied: 'Wallet access was declined. You can try again anytime.',
@@ -35,10 +35,17 @@ export function WelcomeScreen() {
   return (
     <div className="screen screen-wide">
       <header className="app-header">
-        <span className="app-header-logo">💌 NimCare</span>
-        <button className="btn btn-ghost" style={{ minHeight: 40, padding: '8px 16px' }} onClick={connect}>
-          {status === 'connecting' ? 'Connecting…' : 'Sign in'}
-        </button>
+        <span className="app-header-logo">
+          <EnvelopeCharacter className="app-header-mark" /> NimCare
+        </span>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn btn-ghost app-header-signin" style={{ minHeight: 40, padding: '8px 16px' }} onClick={connect}>
+            Sign in
+          </button>
+          <button className="btn btn-primary" style={{ minHeight: 40, padding: '8px 18px', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }} onClick={connect} disabled={status === 'connecting'}>
+            <SendIcon style={{ width: 16, height: 16, flexShrink: 0 }} /> Send a CareDrop
+          </button>
+        </div>
       </header>
 
       <div className="hero-shell">
@@ -55,19 +62,16 @@ export function WelcomeScreen() {
           <h1>Send a moment,<br />not just money.</h1>
           <p className="subtitle">Send photos, playlists, movie-night surprises and a little NIM to someone you care about.</p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
-            <button className="btn btn-primary" onClick={connect} disabled={status === 'connecting'}>
-              {status === 'connecting' ? 'Connecting…' : '📤 Send a CareDrop'}
+          <div style={{ marginTop: 18 }}>
+            <button className="btn btn-primary" onClick={connect} disabled={status === 'connecting'} style={{ display: 'inline-flex', alignItems: 'center', gap: 10, justifyContent: 'center', width: '100%' }}>
+              <SendIcon style={{ width: 18, height: 18 }} /> {status === 'connecting' ? 'Connecting…' : 'Send a CareDrop'}
             </button>
-            <a className="btn btn-ghost" href="#how-it-works" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-              ▶ See how it works
-            </a>
           </div>
 
           <div className="trust-row">
-            <span>🔒 Private &amp; secure</span>
-            <span>💛 Powered by Nimiq</span>
-            <span>🤝 Real connections</span>
+            <span>Private &amp; secure</span>
+            <span>Powered by Nimiq</span>
+            <span>Real connections</span>
           </div>
 
           {status === 'error' && (
@@ -86,7 +90,7 @@ export function WelcomeScreen() {
         </div>
       </div>
 
-      <section id="how-it-works" style={{ marginTop: 8 }}>
+      <section style={{ marginTop: 8 }}>
         <p className="eyebrow" style={{ textAlign: 'center', color: 'var(--color-accent)' }}>CAREDROPS</p>
         <h2 style={{ textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 26, margin: '4px 0 4px' }}>
           Send something they'll actually remember.
@@ -95,17 +99,17 @@ export function WelcomeScreen() {
 
         <div className="feature-grid">
           <div className="feature-card" style={{ background: 'var(--color-accent-soft)' }}>
-            <span className="feature-card-emoji">📸</span>
+            <span className="feature-card-icon" style={{ color: 'var(--color-accent)' }}><PhotoIcon /></span>
             <p className="feature-card-title">I was thinking of you</p>
             <p className="feature-card-desc">Send a photo, a little note and something extra.</p>
           </div>
           <div className="feature-card" style={{ background: 'var(--color-sky-soft)' }}>
-            <span className="feature-card-emoji">🎵</span>
+            <span className="feature-card-icon" style={{ color: 'var(--color-sky)' }}><MusicIcon /></span>
             <p className="feature-card-title">This made me think of you</p>
             <p className="feature-card-desc">Share a song or playlist with a little NIM attached.</p>
           </div>
           <div className="feature-card" style={{ background: 'var(--color-gold-soft)' }}>
-            <span className="feature-card-emoji">🍿</span>
+            <span className="feature-card-icon" style={{ color: '#B8862F' }}><MovieIcon /></span>
             <p className="feature-card-title">Movie on me</p>
             <p className="feature-card-desc">Turn a small gift into movie night.</p>
           </div>

@@ -1,22 +1,22 @@
 # DESIGN — NimCare
 
-> **2026-09-18 redesign (round 2)**: replaced generic floating emoji chips with real original "character" illustrations (`app/src/components/Illustrations.tsx` — an envelope character, a vinyl+headphones character, a popcorn/movie character, plus small sparkle/heart accents), composed into a genuine two-sided desktop hero (left/center/right, via `.hero-shell` + `.screen-wide`) that collapses to a single hero character above the headline on mobile. A compact on-page "How it works" section with three colored feature cards was added below the Welcome hero, replacing a plain hint line. See the round-1 notes below for the base palette/typography system, which is unchanged.
+> **2026-09-18 redesign (round 3 — current)**: corrected two things round 2 got wrong per direct feedback. (1) **Light theme is now forced, not system-dependent.** Round 2 still had a `prefers-color-scheme: dark` variant, and a viewer whose OS/browser was in dark mode saw a dark NimCare — read as "the redesign went dark," which was never the intent. The dark media query is deleted; `:root` sets `color-scheme: light` and `index.html` sets `<meta name="color-scheme" content="light">`, so the app renders identically regardless of system theme. Verified live with the browser emulator forced to `colorScheme: dark` — the app stayed light. (2) **No emoji anywhere in the UI.** Every emoji glyph (🎁📸🎵🍿💌 etc.) used as a functional icon is replaced with a small inline-SVG icon component (`PhotoIcon`, `MusicIcon`, `MovieIcon`, `GiftIcon`, `SendIcon` in `Illustrations.tsx`) or the envelope character. The hero also dropped the "See how it works" secondary button per feedback — one primary CTA ("Send a CareDrop") only, mirrored as a pill button in the nav next to "Sign in" (hidden below 480px to avoid nav crowding, since it's a redundant action pre-auth). Round 2's two-sided character hero, feature cards, and mobile-collapse behavior are otherwise unchanged — see below.
 
 ## Visual direction
 
 Joyful, intimate, playful, modern consumer product — not a crypto dashboard, not DeFi software, not a generic SaaS starter. Warm off-white background, bold rounded sans headlines, coral primary action, playful floating icon accents, generous whitespace, mobile-first.
 
-## Tokens (implemented in `app/src/index.css`)
+## Tokens (implemented in `app/src/index.css`) — single light theme, no dark variant
 
-- Background: `#FAFAF7` light / `#171613` dark
-- Surface (cards): `#FFFFFF` light / `#201F1B` dark
-- Text: `#242424` light / `#F5F3EE` dark, muted `#78756E` / `#A7A296`
-- Primary accent (coral): `#D9643A` light / `#E8875C` dark, soft `#FBE7DC` / `#3A2A21`
-- Sky blue accent: `#57B8F5` / `#7BCBFA`, soft `#E2F3FE` / `#1E2E38` — used for the Playlist type and external-link cards
-- Green accent: `#16C784` / `#3FDBA0`, soft `#DEF6EB` / `#163429` — used for the Treat type and success states
-- Gold accent: `#FFC85C` / `#FFD581`, soft `#FFF3DA` / `#3A2F16` — used for the Movie type and the on-chain gift pill
-- Plum/berry (secondary, used sparingly): `#6B3F52` / `#9C7186`
-- Error: `#FF4C2E` / `#FF8266`
+- Background: `#FAFAF7`
+- Surface (cards): `#FFFFFF`
+- Text: `#242424`, muted `#78756E`
+- Primary accent (coral): `#D9643A`, soft `#FBE7DC`
+- Sky blue accent: `#57B8F5`, soft `#E2F3FE` — used for the Playlist type and external-link cards
+- Green accent: `#16C784`, soft `#DEF6EB` — used for the Treat type and success states
+- Gold accent: `#FFC85C`, soft `#FFF3DA` — used for the Movie type and the on-chain gift pill
+- Plum/berry (secondary, used sparingly): `#6B3F52`
+- Error: `#FF4C2E`
 - Radii: 28px (hero cards/media), 18px (composer/review cards), 12px (inputs/pills)
 - Font: **Manrope** (rounded humanist grotesk, loaded via Google Fonts, weights 500–800), matching the brief's "rounded/humanist sans with premium consumer feel" direction
 

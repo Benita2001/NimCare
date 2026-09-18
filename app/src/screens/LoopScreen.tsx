@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
+import type React from 'react';
 import { useSession } from '../sessionContext';
 import { api } from '../api/client';
 import { shortenAddress } from '../lib/luna';
+import { PhotoIcon, MusicIcon, MovieIcon, GiftIcon } from '../components/Illustrations';
 
-const TYPE_EMOJI: Record<string, string> = { PHOTO: '📸', PLAYLIST: '🎵', MOVIE: '🍿', TREAT: '☕' };
+const TYPE_ICON: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  PHOTO: PhotoIcon,
+  PLAYLIST: MusicIcon,
+  MOVIE: MovieIcon,
+  TREAT: GiftIcon,
+};
 
 export function LoopScreen({
   pairId,
@@ -43,19 +50,25 @@ export function LoopScreen({
       {moments.length === 0 && <p className="empty-state">No moments yet.</p>}
 
       <div className="loop-list">
-        {moments.map((m) => (
-          <button key={m.id} className="moment-card" onClick={() => onOpenMoment(m.id)}>
-            {m.media_url ? (
-              <img className="moment-thumb" src={m.media_url} alt="" />
-            ) : (
-              <div className="moment-thumb">{TYPE_EMOJI[m.type] ?? '💛'}</div>
-            )}
-            <span>
-              <div className="moment-title">{TYPE_EMOJI[m.type]} {m.title ?? m.caption ?? 'A moment'}</div>
-              <div className="hint">{m.sender_wallet === address ? 'You sent this' : 'They sent this'}</div>
-            </span>
-          </button>
-        ))}
+        {moments.map((m) => {
+          const Icon = TYPE_ICON[m.type] ?? GiftIcon;
+          return (
+            <button key={m.id} className="moment-card" onClick={() => onOpenMoment(m.id)}>
+              {m.media_url ? (
+                <img className="moment-thumb" src={m.media_url} alt="" />
+              ) : (
+                <div className="moment-thumb"><Icon style={{ width: 22, height: 22 }} /></div>
+              )}
+              <span>
+                <div className="moment-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon style={{ width: 16, height: 16, flexShrink: 0 }} />
+                  {m.title ?? m.caption ?? 'A moment'}
+                </div>
+                <div className="hint">{m.sender_wallet === address ? 'You sent this' : 'They sent this'}</div>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

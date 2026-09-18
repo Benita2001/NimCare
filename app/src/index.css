@@ -23,31 +23,13 @@
   --radius-sm: 12px;
   --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #171613;
-    --color-surface: #201F1B;
-    --color-text: #F5F3EE;
-    --color-text-muted: #A7A296;
-    --color-accent: #E8875C;
-    --color-accent-soft: #3A2A21;
-    --color-sky: #7BCBFA;
-    --color-sky-soft: #1E2E38;
-    --color-green: #3FDBA0;
-    --color-green-soft: #163429;
-    --color-gold: #FFD581;
-    --color-gold-soft: #3A2F16;
-    --color-secondary: #9C7186;
-    --color-secondary-soft: #2E2530;
-    --color-success: #3FDBA0;
-    --color-success-soft: #163429;
-    --color-error: #FF8266;
-    --color-error-soft: #3A211B;
-    --color-border: #322F29;
-  }
-}
+/* 2026-09-18: NimCare is intentionally single-theme (light) per explicit
+ * design direction — do not reintroduce a `prefers-color-scheme: dark`
+ * variant here without checking with the user first; a prior redesign pass
+ * did exactly that and it read as "the app went dark" against their intent. */
 
 * { box-sizing: border-box; }
 
@@ -75,8 +57,13 @@ body { overflow-x: hidden; }
 
 .screen-center { align-items: center; justify-content: center; text-align: center; }
 
-.app-header { display: flex; justify-content: space-between; align-items: center; }
-.app-header-logo { font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+.app-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.app-header-signin { display: none; }
+@media (min-width: 480px) {
+  .app-header-signin { display: inline-flex; }
+}
+.app-header-logo { font-family: var(--font-display); font-weight: 800; font-size: 18px; display: inline-flex; align-items: center; gap: 8px; }
+.app-header-mark { width: 26px; height: 26px; }
 
 .wallet-chip {
   font-size: 13px;
@@ -223,7 +210,17 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
   padding: 22px;
   text-align: left;
 }
-.feature-card-emoji { font-size: 30px; display: block; margin-bottom: 10px; }
+.feature-card-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.7);
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+.feature-card-icon svg { width: 22px; height: 22px; }
 .feature-card-title { font-weight: 800; font-size: 18px; margin: 0 0 4px; }
 .feature-card-desc { font-size: 14px; opacity: 0.75; margin: 0; }
 
@@ -233,7 +230,8 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
   display: flex;
   align-items: center;
   gap: 16px;
-  border: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: 18px 20px;
   cursor: pointer;
@@ -249,15 +247,15 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
   background: rgba(255,255,255,0.6);
   flex-shrink: 0;
 }
+.type-card-icon-svg { width: 22px; height: 22px; }
 .type-card-title { font-weight: 700; font-size: 16px; }
-.type-card-photo { background: var(--color-accent-soft); }
-.type-card-playlist { background: var(--color-sky-soft); }
-.type-card-movie { background: var(--color-gold-soft); }
-.type-card-treat { background: var(--color-green-soft); }
+.type-card-photo { background: var(--color-accent-soft); color: var(--color-accent); }
+.type-card-playlist { background: var(--color-sky-soft); color: var(--color-sky); }
+.type-card-movie { background: var(--color-gold-soft); color: #B8862F; }
+.type-card-treat { background: var(--color-green-soft); color: var(--color-green); }
 
 /* --- Loops --- */
 .loop-list { display: flex; flex-direction: column; gap: 10px; }
@@ -357,9 +355,8 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
 /* --- Share success --- */
 .success-hero { text-align: center; padding-top: 20px; }
 .success-icon {
-  font-size: 40px;
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   margin: 0 auto 12px;
   border-radius: 999px;
   background: var(--color-accent-soft);
@@ -368,6 +365,7 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
   justify-content: center;
   animation: pop-in 0.4s ease;
 }
+.success-icon svg { width: 68px; height: 68px; }
 @keyframes pop-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .success-icon { animation: none; } }
 
