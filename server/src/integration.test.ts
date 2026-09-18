@@ -160,6 +160,131 @@ describe('pairing + caredrop + authorization (2026-09-18 pivot: surprise-first, 
     expect(Number.isInteger(drop.body.amountLuna)).toBe(true);
   });
 
+  it('creates a CareDrop for a recipient who has never opened NimCare before, without a foreign-key violation — the 2026-09-18 backend root-cause fix', { timeout: 20000 }, async () => {
+    // Reproduces the real production bug exactly: every prior test in this
+    // file logs the recipient in first (loginWallet(b)), which happens to
+    // insert their wallet row as a side effect and therefore never
+    // exercised this path. A genuine first-time recipient has no wallet
+    // row yet, and pair.member_b_wallet / caredrop.recipient_wallet both
+    // have a foreign-key reference to wallet(address) — confirmed via a
+    // real production error otherwise (SQLSTATE 23503, constraint
+    // pair_member_b_wallet_fkey). See MEMORY.md.
+    const a = KeyPair.generate();
+    const b = KeyPair.generate();
+    const { verifyRes: aLogin } = await loginWallet(a);
+    const tokenA = aLogin.body.sessionToken;
+    // B is deliberately NEVER logged in before this point — no wallet,
+    // auth_nonce, or session row for B exists yet.
+    const addressB = b.publicKey.toAddress().toUserFriendlyAddress();
+
+    const { db } = await import('./db/index.js');
+    const beforeWallet = await db.get<{ address: string }>(`SELECT address FROM wallet WHERE address = ?`, [addressB]);
+    expect(beforeWallet).toBeUndefined();
+
+    const drop = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'TREAT', amountLuna: 1 });
+
+    expect(drop.status).toBe(200);
+    expect(drop.body.recipient).toBe(addressB);
+
+    // A placeholder wallet row now exists for B, but with no public_key —
+    // it satisfies the FK only; it must never look authenticated.
+    const walletRow = await db.get<{ address: string; public_key: string | null }>(
+      `SELECT address, public_key FROM wallet WHERE address = ?`,
+      [addressB],
+    );
+    expect(walletRow).toBeTruthy();
+    expect(walletRow!.public_key).toBeNull();
+
+    const loops = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenA}`);
+    expect(loops.body.pairs.some((p: any) => p.member_b_wallet === addressB)).toBe(true);
+
+    // B can now request a nonce with no "wallet already exists"-style
+    // failure (ON CONFLICT DO NOTHING makes this a no-op, not an error).
+    const nonceRes = await request(app).post('/api/auth/nonce').send({ address: addressB });
+    expect(nonceRes.status).toBe(200);
+
+    // B fully authenticates — the SAME placeholder row is updated in
+    // place (public_key set), not duplicated (address is the primary key,
+    // so a duplicate is structurally impossible, but confirm the update
+    // actually lands and login succeeds end to end).
+    const { verifyRes: bLogin } = await loginWallet(b);
+    expect(bLogin.status).toBe(200);
+    const afterWallet = await db.get<{ public_key: string | null }>(
+      `SELECT public_key FROM wallet WHERE address = ?`,
+      [addressB],
+    );
+    expect(afterWallet!.public_key).toBe(b.publicKey.toHex());
+  });
+
+  it('does not duplicate an already-existing recipient wallet row, and reuses (not duplicates) an existing Loop', { timeout: 20000 }, async () => {
+    const a = KeyPair.generate();
+    const b = KeyPair.generate();
+    const { verifyRes: aLogin } = await loginWallet(a);
+    const { address: addressB } = await loginWallet(b); // B already authenticated
+    const tokenA = aLogin.body.sessionToken;
+
+    const first = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'TREAT', amountLuna: 1 });
+    expect(first.status).toBe(200);
+
+    const loopsAfterFirst = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenA}`);
+    const pairId = loopsAfterFirst.body.pairs.find((p: any) => p.member_b_wallet === addressB)?.id;
+    expect(pairId).toBeTruthy();
+
+    // A second CareDrop between the same two wallets must reuse the same
+    // Loop, not create a duplicate pair row.
+    const second = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'TREAT', amountLuna: 1 });
+    expect(second.status).toBe(200);
+
+    const loopsAfterSecond = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenA}`);
+    const pairsWithB = loopsAfterSecond.body.pairs.filter((p: any) => p.member_b_wallet === addressB);
+    expect(pairsWithB.length).toBe(1);
+    expect(pairsWithB[0].id).toBe(pairId);
+  });
+
+  it('a placeholder (never-authenticated) recipient cannot access their CareDrop until they actually sign in', { timeout: 20000 }, async () => {
+    const a = KeyPair.generate();
+    const b = KeyPair.generate();
+    const stranger = KeyPair.generate();
+    const { verifyRes: aLogin } = await loginWallet(a);
+    const tokenA = aLogin.body.sessionToken;
+    const addressB = b.publicKey.toAddress().toUserFriendlyAddress(); // never logged in yet
+
+    const drop = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'TREAT', caption: 'hi', amountLuna: 1 });
+    expect(drop.status).toBe(200);
+
+    // No session at all -> 401.
+    const noAuth = await request(app).get(`/api/caredrops/by-token/${drop.body.shareToken}`);
+    expect(noAuth.status).toBe(401);
+
+    // A valid session, but the wrong wallet -> 403 (never leaks content).
+    const { verifyRes: strangerLogin } = await loginWallet(stranger);
+    const wrongWallet = await request(app)
+      .get(`/api/caredrops/by-token/${drop.body.shareToken}`)
+      .set('authorization', `Bearer ${strangerLogin.body.sessionToken}`);
+    expect(wrongWallet.status).toBe(403);
+
+    // B actually authenticates (updating their placeholder wallet row),
+    // then can access via the share token.
+    const { verifyRes: bLogin } = await loginWallet(b);
+    const asRecipient = await request(app)
+      .get(`/api/caredrops/by-token/${drop.body.shareToken}`)
+      .set('authorization', `Bearer ${bLogin.body.sessionToken}`);
+    expect(asRecipient.status).toBe(200);
+    expect(asRecipient.body.caredrop.recipientWallet).toBe(addressB);
+  });
+
   it('excludes legacy PENDING pair rows (member_b_wallet still NULL) from /pairs/mine — the 2026-09-18 blank-screen hotfix', { timeout: 20000 }, async () => {
     // Reproduces the exact production incident: a stale pre-pivot invite row
     // (created by the old, now-unused invite/accept flow) with

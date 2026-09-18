@@ -180,6 +180,32 @@ This resolves several PROJECT_PLAN unknowns with certainty (from source, not doc
 
 **What this investigation does NOT claim**: `ROOT CAUSE` is **not proven**. No physical device access exists in this environment; Test D/E/F/Prepared-Card are built and ready but not run. The double-tap guard is a real, independently-justified fix, not a guess at the `internal_error` cause. The timing/lifecycle hypothesis remains the strongest untested lead, not a confirmed finding — see `TASKS.md` Phase 14 for the exact next device steps.
 
+## 2026-09-18 backend root cause: recipient foreign-key violation (CONFIRMED)
+
+**Root cause: CONFIRMED**, not inferred — via a real production Vercel log for `POST /api/caredrops`:
+
+```
+error: insert or update on table "pair" violates foreign key constraint "pair_member_b_wallet_fkey"
+  at async findOrCreateLoop (/vercel/path0/src/routes/pairs.ts:119:3)
+  at async <anonymous> (/vercel/path0/src/routes/caredrops.ts:67:18)
+code: '23503'
+table: 'pair'
+constraint: 'pair_member_b_wallet_fkey'
+detail: 'Key (member_b_wallet)=(<address>) is not present in table "wallet".'
+```
+
+The surprise-first product lets a sender name any valid Nimiq address as a recipient, including one that has never opened NimCare — but `pair.member_b_wallet` and `caredrop.recipient_wallet` both carry a foreign-key reference to `wallet(address)`, and until this fix, only `POST /api/auth/nonce` ever inserted a `wallet` row. `findOrCreateLoop`'s `INSERT INTO pair (..., member_b_wallet, ...)` therefore failed for any never-before-seen recipient — this is the actual, decisive explanation for `internal_error`: `Prepare (backend only)` in the Prepared-Card test failed *before* any Nimiq Pay call because the backend itself was failing on `POST /api/caredrops`.
+
+**Why every prior diagnostic transaction test (A/B/C) passed and the Prepared-Card "Prepare" step is what finally caught it**: A/B/C sent NIM directly via the wallet provider, with no backend involvement at all — there is no `caredrop`/`pair` row for a raw provider call. The normal Composer flow and the Prepared-Card test's "Prepare" step both go through `POST /api/caredrops`, which is exactly where the FK violation lives. The timing/lifecycle investigation (previous entry) was a reasonable, honestly-labeled *unproven hypothesis* given the evidence available at the time; this new evidence (Prepare failing before any wallet call) is what actually locates the bug. **The timing hypothesis is REJECTED as the root cause** — not because it was disproven experimentally, but because the newly available evidence points to an earlier, backend-only failure that fully explains the symptom without needing a timing effect at all.
+
+**A real, structural blind spot in every prior test**: every existing integration test that involves a recipient (including the ones added in earlier hotfixes this same day) called `loginWallet(b)` for the recipient *before* creating a CareDrop — which, as a side effect, always inserted the recipient's `wallet` row first via `/api/auth/nonce`. This meant the entire test suite, despite reaching 33 passing tests, never once exercised the actual first-time-recipient path that real users hit constantly (sending a surprise to someone who has never used the app — the product's core use case). New tests were added that deliberately never authenticate the recipient first.
+
+**Fix**: new `server/src/services/wallet.ts` exports `ensureWalletRecord(address)` — an idempotent `INSERT ... ON CONFLICT(address) DO NOTHING`, explicitly documented as *not* an authentication mechanism (no `public_key`, grants no session, no trust). Called in `POST /api/caredrops` for both the recipient and (defensively) the sender, before `findOrCreateLoop`. `auth.ts`'s `/nonce` handler now calls the same shared helper instead of its own duplicate inline insert. When that recipient later actually authenticates, the existing placeholder row is updated in place (verified by test: `public_key` goes from `NULL` to the real value, no duplicate row — `address` is the primary key, so duplication is structurally impossible regardless).
+
+**Auth security preserved**: a placeholder wallet row grants nothing. `requireSession` is unchanged — still purely session-token based, itself only issued after real Ed25519 signature verification (`verifyNimiqSignedMessage`). Verified by a new test: an unauthenticated request to a placeholder recipient's CareDrop gets 401; a different wallet's valid session gets 403; only after the real recipient actually signs in do they get access.
+
+**Error logging improved**: the global Express error handler now logs structured, safe fields for Postgres errors (`code`, `constraint`, `table`, `route`, `method`) instead of the raw error object (which for this exact bug included the recipient's address in its `detail` field). The client-facing response is unchanged — still the generic `{ error: 'internal_error' }` in all cases.
+
 ## Environment facts
 
 - Working directory `/Users/admin/NimCare` started as an empty greenfield repo (one stray unrelated file `bitsentry_audit.db` — ignored, added to `.gitignore`, left untouched as it belongs to a different tool).

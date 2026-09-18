@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { db } from '../db/index.js';
 import { isValidNimiqAddress, normalizeAddress } from '../nimiqAddress.js';
 import { verifyNimiqSignedMessage } from '../services/nimiqSignedMessage.js';
+import { ensureWalletRecord } from '../services/wallet.js';
 
 export const authRouter = Router();
 
@@ -49,11 +50,7 @@ authRouter.post('/nonce', async (req, res) => {
     [message, normalized, now.toISOString(), expiresAt],
   );
 
-  await db.run(
-    `INSERT INTO wallet (address, created_at, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(address) DO NOTHING`,
-    [normalized, now.toISOString(), now.toISOString()],
-  );
+  await ensureWalletRecord(normalized);
 
   res.json({ nonce: message, expiresAt });
 });

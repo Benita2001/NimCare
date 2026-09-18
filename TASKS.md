@@ -146,6 +146,17 @@ Triggered by real-device evidence: Test A/B/C all PASS with real tx hashes using
 - **NIM-083** [DONE] Production error message updated to the exact requested text ("We couldn't open the Nimiq Pay transaction. Please try again.") — never shows raw `internal_error`.
 - **NIM-084** [TODO — blocking, demo-critical] Root cause NOT proven. Requires a human to run, in order: Test D (replay), then either E/F or the Prepared-Card test, on the real device, and report which succeed/fail. Only after that should production architecture (the "prepare before final tap" restructure) be considered — explicitly not done speculatively in this pass.
 
+## Phase 15 — Backend Root Cause: Recipient FK Violation (2026-09-18)
+
+Triggered by the Prepared-Card test's "Prepare" step failing with `internal_error` *before* any Nimiq Pay call — proving the failure was backend-only.
+
+- **NIM-085** [DONE] Confirmed via real production Vercel log: `POST /api/caredrops` → `findOrCreateLoop` → Postgres SQLSTATE `23503`, constraint `pair_member_b_wallet_fkey`. A never-before-seen recipient has no `wallet` row yet, but `pair.member_b_wallet`/`caredrop.recipient_wallet` both reference `wallet(address)`.
+- **NIM-086** [DONE] Root cause of the timing/lifecycle investigation (Phase 14) reclassified: **REJECTED** as the explanation — not disproven experimentally, but superseded by decisive evidence (Prepare failing pre-wallet-call) that fully explains the symptom without it.
+- **NIM-087** [DONE] New `server/src/services/wallet.ts` (`ensureWalletRecord`), called for the recipient (and defensively the sender) in `POST /api/caredrops` before `findOrCreateLoop`; `auth.ts` refactored to use the same shared helper instead of a duplicate inline insert.
+- **NIM-088** [DONE] Confirmed every prior recipient-involving test (across all of today's hotfixes) always authenticated the recipient first, which incidentally created their wallet row — meaning the real first-time-recipient path (the product's core use case) was never actually tested until now. 3 new tests added covering: never-before-seen recipient (200, placeholder row with null public_key, later real auth updates it in place), existing-recipient/existing-loop reuse (no duplication), and placeholder-recipient authorization (401 unauthenticated, 403 wrong wallet, 200 only after real sign-in).
+- **NIM-089** [DONE] Improved global error handler to log safe structured fields (code/constraint/table/route/method) for DB errors instead of the raw error object, which previously included the recipient's address in `detail`. Client-facing response unchanged.
+- **NIM-090** [TODO — blocking, demo-critical] Prepared-Card retest not yet performed on the real device. Backend fix is code-confirmed (36/36 tests passing, including a direct reproduction of the exact production bug) but the end-to-end demo path (Prepare → Send → normal Photo CareDrop → receiver flow) remains unverified until a human retests.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

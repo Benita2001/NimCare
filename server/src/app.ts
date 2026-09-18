@@ -56,8 +56,41 @@ app.use('/api/pairs', pairsRouter);
 app.use('/api/caredrops', caredropsRouter);
 app.use('/api/media', mediaRouter);
 
+/**
+ * Logs safe, structured diagnostic fields — never the full raw error
+ * object (which, for a Postgres error, includes `detail`, potentially
+ * containing user data like a wallet address), never request bodies,
+ * session tokens, or signatures. The client always gets the same generic
+ * `internal_error` regardless — this only makes server-side debugging
+ * possible without over-logging. See MEMORY.md 2026-09-18 backend
+ * root-cause fix.
+ */
+function isPostgresError(err: unknown): err is { code: string; constraint?: string; table?: string } {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    typeof (err as { code?: unknown }).code === 'string' &&
+    /^[0-9A-Z]{5}$/.test((err as { code: string }).code)
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: any, _req: any, res: any, _next: any) => {
-  console.error(err);
+app.use((err: any, req: any, res: any, _next: any) => {
+  if (isPostgresError(err)) {
+    console.error('[DB ERROR]', {
+      code: err.code,
+      constraint: err.constraint ?? null,
+      table: err.table ?? null,
+      route: req.originalUrl,
+      method: req.method,
+    });
+  } else {
+    console.error('[ERROR]', {
+      name: err instanceof Error ? err.name : 'UnknownError',
+      message: err instanceof Error ? err.message : String(err),
+      route: req.originalUrl,
+      method: req.method,
+    });
+  }
   if (!res.headersSent) res.status(500).json({ error: 'internal_error' });
 });

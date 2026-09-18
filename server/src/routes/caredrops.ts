@@ -10,6 +10,7 @@ import { verifyCareDropTransaction, applyVerificationOutcome, type CareDropRow }
 import { PROMPT_LIBRARY } from '../prompts.js';
 import { CAREDROP_TYPES, detectMusicProvider } from '../caredropTypes.js';
 import { findOrCreateLoop } from './pairs.js';
+import { ensureWalletRecord } from '../services/wallet.js';
 
 export const caredropsRouter = Router();
 
@@ -63,6 +64,22 @@ caredropsRouter.post(
       if (!/^https:\/\//.test(externalUrl)) return res.status(400).json({ error: 'invalid_external_url' });
       externalProvider = detectMusicProvider(externalUrl);
     }
+
+    // The recipient may have never opened NimCare before — the
+    // surprise-first product explicitly allows naming any valid Nimiq
+    // address as a recipient. pair.member_b_wallet and
+    // caredrop.recipient_wallet both have a foreign-key reference to
+    // wallet(address), so that row must exist before findOrCreateLoop's
+    // INSERT — confirmed via a real production error otherwise (SQLSTATE
+    // 23503, constraint pair_member_b_wallet_fkey; see MEMORY.md). This
+    // placeholder row has no public_key and grants no authentication —
+    // only a later real sign-in (auth.ts) can do that.
+    await ensureWalletRecord(recipient);
+    // The sender's row should already exist (requireSession only ever
+    // authenticates an address that completed real wallet auth, which
+    // itself creates the row) — asserted defensively anyway since this is
+    // a cheap, idempotent no-op in the expected case.
+    await ensureWalletRecord(req.walletAddress);
 
     const loop = await findOrCreateLoop(req.walletAddress, recipient);
 
