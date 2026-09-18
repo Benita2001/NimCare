@@ -111,6 +111,19 @@ Triggered by a real on-device report inside Nimiq Pay: after a successful wallet
 - **NIM-063** [DONE] Added temporary, explicitly non-sensitive console-only stage markers (`app/src/diagnostics.ts`) through the connect → Home render path, to localize a future on-device failure if this fix doesn't fully resolve it. Intended to be removed once device verification confirms the fix.
 - **NIM-064** [TODO — blocking] Device retest not yet performed by a human inside Nimiq Pay. Code-level fix is `PASS`; device fix remains `UNVERIFIED` until confirmed. See `MEMORY.md` for the exact retest procedure.
 
+## Phase 12 — Real-Device Transaction internal_error Hotfix (2026-09-18)
+
+Triggered by a real on-device report inside Nimiq Pay: past the blank-screen fix, the flow now reaches the payment step and `provider.sendBasicTransactionWithData()` fails with `internal_error`, no tx hash, before `api.submitPayment()` is ever reached.
+
+- **NIM-065** [DONE] Ruled out backend RPC/verification as the immediate cause by code inspection (confirmed the failure is entirely client-side, before any backend call). Not modified to "hide" this.
+- **NIM-066** [DONE] Found and fixed a real, confirmed bug while investigating: every SDK `ErrorResponse` was collapsed into `PermissionDenied`/"Transaction cancelled", discarding the SDK's own `error.type` field — meaning `internal_error` (or any real cause) was never distinguishable from a user cancellation, in the UI or in any log. New `classifyProviderFailure()` in `app/src/nimiq/provider.ts` inspects the real type/name/message safely and maps known failures to the specified user-facing messages, preserving `InternalError` as its own kind. Verified via a 10-case Node reproduction (no frontend test runner in this repo).
+- **NIM-067** [DONE] Replaced regex-only recipient address validation (`server/src/nimiqAddress.ts`) with `@nimiq/core`'s real `Address.fromUserFriendlyAddress()` checksum-verifying parser. Verified: genuine passes, checksum-tampered format-correct address rejected, malformed rejected. New `nimiqAddress.test.ts` plus an integration test case via the real API.
+- **NIM-068** [DONE] Confirmed 0.5 NIM → exactly 50000 Luna (integer), test added. Confirmed the generated on-chain reference stays well under Nimiq's 64-byte basic-tx-with-data limit, both via a server-side integration assertion and a new client-side runtime check in `sendCareDropPayment` that rejects locally before ever calling the SDK if that were ever not true.
+- **NIM-069** [DONE] Set `NIMIQ_NETWORK_ID=24` on production (was unset/unenforced; `NIMIQ_RPC_URL` was already set) per the user's own live-verified evidence that rpc.nimiqwatch.com serves Mainnet networkId 24. Exposed non-secretly via `GET /api/health` (`networkConfigured`, `networkId`).
+- **NIM-070** [DONE] Added safe, non-sensitive console-only diagnostics through the payment flow (`PAYMENT:provider-ready` through `PAYMENT:send:error:<classified>`), so the next device retest will show exactly which stage is reached and the SDK's real error type/message.
+- **NIM-071** [DONE] Added a temporary diagnostic screen (`app/src/screens/TxDiagnostic.tsx`, reachable only via `?diag=tx`, never linked from navigation) to isolate `sendBasicTransaction()` vs `sendBasicTransactionWithData()` on the real device. Must be removed once the retest identifies the cause.
+- **NIM-072** [TODO — blocking] Real device retest not yet performed. `internal_error`'s exact root cause is not yet confirmed — only two real, independent contributing-cause candidates were found and fixed (error misclassification hiding the true cause; unchecked address checksum). Status: `TRANSACTION DIAGNOSTICS: PASS` / `REAL DEVICE TRANSACTION: UNVERIFIED`.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

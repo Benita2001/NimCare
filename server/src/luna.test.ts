@@ -7,6 +7,14 @@ describe('luna conversion', () => {
     expect(nimToLuna('0.1')).toBe(10_000);
   });
 
+  // 2026-09-18 transaction internal_error hotfix: the real-device test sent
+  // 0.5 NIM — confirms the exact payload value sent to Nimiq Pay is 50000
+  // Luna, not a floating-point approximation.
+  it('converts 0.5 NIM to exactly 50000 Luna', () => {
+    expect(nimToLuna('0.5')).toBe(50_000);
+    expect(Number.isInteger(nimToLuna('0.5'))).toBe(true);
+  });
+
   it('round-trips', () => {
     expect(lunaToNim(nimToLuna('0.1'))).toBe('0.1');
     expect(lunaToNim(nimToLuna('2.5'))).toBe('2.5');

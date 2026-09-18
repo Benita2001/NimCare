@@ -36,9 +36,17 @@ app.use((_req, res, next) => {
 });
 
 app.get('/api/health', (_req, res) => {
+  const rawNetworkId = process.env.NIMIQ_NETWORK_ID;
+  const networkId = rawNetworkId ? Number(rawNetworkId) : null;
   res.json({
     ok: true,
     rpcConfigured: Boolean(process.env.NIMIQ_RPC_URL),
+    // Non-secret: which network on-chain verification expects, so a device
+    // tester can confirm Nimiq Pay's active network matches the backend
+    // before assuming a payment will verify. See MEMORY.md 2026-09-18
+    // transaction internal_error hotfix.
+    networkConfigured: Number.isFinite(networkId),
+    networkId: Number.isFinite(networkId) ? networkId : null,
     environment: process.env.NODE_ENV ?? 'development',
   });
 });

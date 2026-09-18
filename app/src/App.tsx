@@ -8,6 +8,7 @@ import { ComposerScreen } from './screens/Composer';
 import { ShareSuccessScreen } from './screens/ShareSuccess';
 import { CareDropScreen } from './screens/Reveal';
 import { LoopScreen } from './screens/LoopScreen';
+import { TxDiagnosticScreen } from './screens/TxDiagnostic';
 import type { CareDropType } from './api/client';
 
 type Route =
@@ -27,6 +28,13 @@ function Router() {
 
   if (status !== 'connected') {
     return <WelcomeScreen />;
+  }
+
+  // Temporary, diagnostic-only escape hatch for the 2026-09-18 real-device
+  // internal_error investigation (see TxDiagnostic.tsx / MEMORY.md). Only
+  // reachable via ?diag=tx — never linked from normal navigation.
+  if (new URLSearchParams(window.location.search).get('diag') === 'tx') {
+    return <TxDiagnosticScreen />;
   }
 
   switch (route.name) {

@@ -1,19 +1,26 @@
-/**
- * Nimiq user-friendly address format: 9 groups of 4 base32 chars (36 chars
- * total), where the first group is "NQ" + 2 check digits.
- *
- * Bug fixed during the 2026-09-18 hardening pass: this previously required
- * 9 groups *after* `NQ\d{2}`, i.e. 10 groups / 40 chars total — one group
- * too many. That's a real off-by-one, not a style nit: it would have
- * rejected every genuine Nimiq address (which are 36 chars / 9 groups
- * total) while a same-session smoke test happened to pass only because it
- * used a hand-typed 40-char fake address. Caught by testing against a real
- * keypair generated with @nimiq/core (see MEMORY.md).
- */
-const NIMIQ_ADDRESS_RE = /^NQ\d{2}\s?([0-9A-Z]{4}\s?){8}$/;
+import { Address } from '@nimiq/core';
 
+/**
+ * Real Nimiq address validation via @nimiq/core's own parser, not a regex.
+ *
+ * A regex (the previous implementation here) can only check the group/
+ * character-count *format* — it cannot verify the two embedded ISO 7064
+ * MOD 97-10 check digits. A format-correct string with a wrong checksum
+ * passes a regex but is rejected by Nimiq Pay itself when a real
+ * transaction is attempted, which was a live suspect in the 2026-09-18
+ * real-device `internal_error` investigation (see MEMORY.md). Verified
+ * directly against @nimiq/core: a genuine address parses, a checksum-
+ * tampered but format-correct address throws "Invalid checksum", and
+ * malformed strings throw "Wrong length" / "Wrong country code".
+ */
 export function isValidNimiqAddress(address: unknown): address is string {
-  return typeof address === 'string' && NIMIQ_ADDRESS_RE.test(address.trim().toUpperCase());
+  if (typeof address !== 'string') return false;
+  try {
+    Address.fromUserFriendlyAddress(address.trim().toUpperCase());
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function normalizeAddress(address: string): string {

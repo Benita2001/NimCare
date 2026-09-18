@@ -112,6 +112,12 @@ describe('pairing + caredrop + authorization (2026-09-18 pivot: surprise-first, 
     expect(drop.status).toBe(200);
     expect(drop.body.shareToken).toBeTruthy();
 
+    // 2026-09-18 transaction internal_error hotfix: the reference embedded
+    // in the on-chain transaction data must stay well under Nimiq's
+    // documented 64-byte basic-tx-with-data limit — checked here on the
+    // real generated reference, not just assumed from its format.
+    expect(new TextEncoder().encode(drop.body.reference).length).toBeLessThanOrEqual(64);
+
     // The Loop should now exist for both wallets with no separate accept step.
     const loopsA = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenA}`);
     const loopsB = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenB}`);
@@ -160,6 +166,21 @@ describe('pairing + caredrop + authorization (2026-09-18 pivot: surprise-first, 
       .send({ recipientWallet: 'not-an-address', type: 'TREAT', amountLuna: 1000 });
     expect(badAddress.status).toBe(400);
     expect(badAddress.body.error).toBe('invalid_recipient_address');
+
+    // 2026-09-18 transaction internal_error hotfix: a format-correct
+    // address with a tampered checksum must be rejected here too — a
+    // regex alone would have let this through, only for Nimiq Pay itself
+    // to reject the resulting transaction on-device. See MEMORY.md.
+    const genuineForTamper = KeyPair.generate().toAddress().toUserFriendlyAddress();
+    const tamperParts = genuineForTamper.split(' ');
+    const lastPart = tamperParts[tamperParts.length - 1];
+    tamperParts[tamperParts.length - 1] = (lastPart[0] === 'A' ? 'B' : 'A') + lastPart.slice(1);
+    const checksumInvalid = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: tamperParts.join(' '), type: 'TREAT', amountLuna: 1000 });
+    expect(checksumInvalid.status).toBe(400);
+    expect(checksumInvalid.body.error).toBe('invalid_recipient_address');
 
     const selfSend = await request(app)
       .post('/api/caredrops')
