@@ -1,5 +1,6 @@
 import { useSession } from '../sessionContext';
 import { buildNimiqPayOpenLinks } from '../nimiq/deeplink';
+import { HeroDecor } from '../components/HeroDecor';
 
 const ERROR_COPY: Record<string, string> = {
   PermissionDenied: 'Wallet access was declined. You can try again anytime.',
@@ -20,9 +21,11 @@ export function WelcomeScreen() {
     const nimiqPayLink = buildNimiqPayOpenLinks(window.location.origin).https;
     return (
       <div className="screen screen-center">
-        <div className="brand-mark">💛</div>
-        <h1>Open NimCare in Nimiq Pay</h1>
-        <p className="subtitle">NimCare only works inside the Nimiq Pay app, where it can access your wallet.</p>
+        <div className="hero">
+          <HeroDecor />
+          <h1>Open NimCare in Nimiq Pay</h1>
+          <p className="subtitle">NimCare only works inside the Nimiq Pay app, where it can access your wallet.</p>
+        </div>
         <a className="btn btn-primary" href={nimiqPayLink} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
           Open in Nimiq Pay
         </a>
@@ -33,9 +36,11 @@ export function WelcomeScreen() {
 
   return (
     <div className="screen screen-center">
-      <div className="brand-mark">💛</div>
-      <h1>Make their day.</h1>
-      <p className="subtitle">Send a moment, not just money.</p>
+      <div className="hero">
+        <HeroDecor />
+        <h1>Send a moment,<br />not just money.</h1>
+        <p className="subtitle">Send photos, playlists, movie-night surprises and a little NIM to someone you care about.</p>
+      </div>
 
       <button className="btn btn-primary" onClick={connect} disabled={status === 'connecting'}>
         {status === 'connecting' ? 'Connecting…' : 'Continue with Nimiq Pay'}
