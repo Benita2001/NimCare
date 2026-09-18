@@ -33,7 +33,7 @@ function buildChallengeMessage(address: string, nonce: string): string {
   ].join('\n');
 }
 
-authRouter.post('/nonce', (req, res) => {
+authRouter.post('/nonce', async (req, res) => {
   const { address } = req.body ?? {};
   if (!isValidNimiqAddress(address)) {
     return res.status(400).json({ error: 'invalid_address' });
@@ -44,14 +44,16 @@ authRouter.post('/nonce', (req, res) => {
   const message = buildChallengeMessage(normalized, nonceId);
   const expiresAt = new Date(now.getTime() + NONCE_TTL_MS).toISOString();
 
-  db.prepare(
+  await db.run(
     `INSERT INTO auth_nonce (nonce, address, purpose, created_at, expires_at) VALUES (?, ?, 'session', ?, ?)`,
-  ).run(message, normalized, now.toISOString(), expiresAt);
+    [message, normalized, now.toISOString(), expiresAt],
+  );
 
-  db.prepare(
+  await db.run(
     `INSERT INTO wallet (address, created_at, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(address) DO NOTHING`,
-  ).run(normalized, now.toISOString(), now.toISOString());
+    [normalized, now.toISOString(), now.toISOString()],
+  );
 
   res.json({ nonce: message, expiresAt });
 });
@@ -67,16 +69,17 @@ authRouter.post('/nonce', (req, res) => {
  * STRUCTURAL_ONLY behavior (which accepted any publicKey/signature pair
  * shaped correctly) has been removed.
  */
-authRouter.post('/verify', (req, res) => {
+authRouter.post('/verify', async (req, res) => {
   const { address, publicKey, signature, nonce } = req.body ?? {};
   if (!isValidNimiqAddress(address) || !publicKey || !signature || !nonce) {
     return res.status(400).json({ error: 'missing_fields' });
   }
   const normalized = normalizeAddress(address);
 
-  const row = db
-    .prepare(`SELECT * FROM auth_nonce WHERE nonce = ? AND address = ?`)
-    .get(nonce, normalized) as { expires_at: string; consumed_at: string | null } | undefined;
+  const row = await db.get<{ expires_at: string; consumed_at: string | null }>(
+    `SELECT * FROM auth_nonce WHERE nonce = ? AND address = ?`,
+    [nonce, normalized],
+  );
 
   if (!row) return res.status(400).json({ error: 'unknown_nonce' });
   if (row.consumed_at) return res.status(400).json({ error: 'nonce_already_used' });
@@ -92,39 +95,39 @@ authRouter.post('/verify', (req, res) => {
   if (!verification.ok) {
     // Nonce is still consumed on a failed attempt to prevent unlimited
     // retries against the same challenge (replay/brute-force mitigation).
-    db.prepare(`UPDATE auth_nonce SET consumed_at = ? WHERE nonce = ?`).run(new Date().toISOString(), nonce);
+    await db.run(`UPDATE auth_nonce SET consumed_at = ? WHERE nonce = ?`, [new Date().toISOString(), nonce]);
     return res.status(401).json({ error: 'signature_invalid', reason: verification.reason });
   }
 
   const now = new Date();
-  db.prepare(`UPDATE auth_nonce SET consumed_at = ? WHERE nonce = ?`).run(now.toISOString(), nonce);
-  db.prepare(`UPDATE wallet SET public_key = ?, updated_at = ? WHERE address = ?`).run(
+  await db.run(`UPDATE auth_nonce SET consumed_at = ? WHERE nonce = ?`, [now.toISOString(), nonce]);
+  await db.run(`UPDATE wallet SET public_key = ?, updated_at = ? WHERE address = ?`, [
     publicKey,
     now.toISOString(),
     normalized,
-  );
+  ]);
 
   const token = nanoid(32);
   const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
   // Only the hash of the session token is stored — the plaintext token
   // exists solely in the response and the client's own memory, so a DB
   // read (or leak) cannot be used to impersonate an active session.
-  db.prepare(`INSERT INTO session (token_hash, address, created_at, expires_at) VALUES (?, ?, ?, ?)`).run(
+  await db.run(`INSERT INTO session (token_hash, address, created_at, expires_at) VALUES (?, ?, ?, ?)`, [
     hashToken(token),
     normalized,
     now.toISOString(),
     expiresAt,
-  );
+  ]);
 
   res.json({ sessionToken: token, expiresAt, address: normalized });
 });
 
-export function requireSession(req: any, res: any, next: any) {
+export async function requireSession(req: any, res: any, next: any) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'no_session' });
-  const row = db.prepare(`SELECT * FROM session WHERE token_hash = ?`).get(hashToken(token)) as
-    | { address: string; expires_at: string }
-    | undefined;
+  const row = await db.get<{ address: string; expires_at: string }>(`SELECT * FROM session WHERE token_hash = ?`, [
+    hashToken(token),
+  ]);
   if (!row || new Date(row.expires_at).getTime() < Date.now()) {
     return res.status(401).json({ error: 'session_expired' });
   }

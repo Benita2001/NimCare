@@ -10,7 +10,7 @@ NimCare turns NIM payments into meaningful shared moments through CareDrops, pri
 
 ## Nimiq integration explanation
 
-Wallet-native onboarding via `listAccounts()`, real payments via `sendBasicTransactionWithData()` carrying a minimal on-chain reference, and server-side verification against the Nimiq JSON-RPC transaction schema before any CareDrop is considered funded. No email/password, no custody of keys.
+Wallet-native onboarding via `listAccounts()` with real Ed25519 signature verification (`@nimiq/core`) for session login, real payments via `sendBasicTransactionWithData()` carrying a CareDrop-bound on-chain reference, and server-side verification against the real Nimiq JSON-RPC (`https://rpc.nimiqwatch.com`) before any CareDrop is considered funded. No email/password, no custody of keys.
 
 ## Setup / test instructions
 
@@ -22,7 +22,7 @@ https://github.com/Benita2001/NimCare
 
 ## Live app link
 
-TODO — not yet deployed; see `PROJECT_PLAN.md` § Major Blockers (needs a managed database and a configured Nimiq RPC endpoint, neither of which had credentials available while building this submission).
+https://nimcare-app.vercel.app (backed by a live Vercel Function API at https://nimcare-api.vercel.app with a real Neon Postgres database — see `README.md` § Deployment). Not yet tested inside the real Nimiq Pay app on a physical device — see `DEVICE_TESTING.md`.
 
 ## Demo video link
 
@@ -40,11 +40,14 @@ TODO — not yet posted.
 
 - [x] Public GitHub repository
 - [x] MIT `LICENSE`
-- [x] No secrets committed (`.env.example` only, real `.env` gitignored)
+- [x] No secrets committed (`.env.example` only, real `.env`/`.env.local` gitignored; `server/data/*.db` purged from tracking during the 2026-09-18 hardening pass)
 - [x] `PRIVACY.md` disclosure
-- [x] Core CareDrop loop implemented and smoke-tested end to end (see `MEMORY.md`)
-- [ ] Real on-device Nimiq Pay test with two funded wallets — human action required
-- [ ] Production deployment — blocked on database/RPC credentials
+- [x] Core CareDrop loop implemented and proven end to end against the live production deployment (see `MEMORY.md`)
+- [x] Production deployment — live on Vercel with a real Neon Postgres database
+- [x] Real cryptographic wallet authentication (not just structural checks)
+- [x] Automated tests: 20 passing (auth forgery/expiry/replay, transaction verification, authorization, invite consumption) — `cd server && npm test`
+- [x] Lint/typecheck/build clean on both packages
+- [ ] Real on-device Nimiq Pay test with two funded wallets — human action required, protocol ready in `DEVICE_TESTING.md`
 - [ ] Demo video recorded
 - [ ] Social/Skool posts published
-- [ ] Final rule re-check against https://miniappscompetition.com/rules before submitting
+- [ ] Final rule re-check against https://miniappscompetition.com/rules and https://miniappscompetition.com/scoring immediately before submitting — this build re-verified the scoring page live on 2026-09-18 (45/25/15/10/5/100, see `MEMORY.md`), but re-check again since it can change

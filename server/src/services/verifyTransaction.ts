@@ -112,26 +112,29 @@ export async function verifyCareDropTransaction(drop: CareDropRow): Promise<Veri
 /** A transaction hash must not already be attached, verified, to a
  * *different* CareDrop — defense in depth alongside the DB UNIQUE
  * constraint on caredrop.transaction_hash (see schema.sql). */
-export function isTransactionHashReused(txHash: string, excludingCareDropId: string): boolean {
-  const row = db
-    .prepare(`SELECT id FROM caredrop WHERE transaction_hash = ? AND id != ?`)
-    .get(txHash, excludingCareDropId) as { id: string } | undefined;
+export async function isTransactionHashReused(txHash: string, excludingCareDropId: string): Promise<boolean> {
+  const row = await db.get<{ id: string }>(`SELECT id FROM caredrop WHERE transaction_hash = ? AND id != ?`, [
+    txHash,
+    excludingCareDropId,
+  ]);
   return Boolean(row);
 }
 
-export function applyVerificationOutcome(dropId: string, outcome: VerificationOutcome): void {
+export async function applyVerificationOutcome(dropId: string, outcome: VerificationOutcome): Promise<void> {
   const now = new Date().toISOString();
   if (outcome.kind === 'verified') {
-    db.prepare(
+    await db.run(
       `UPDATE caredrop SET status = 'DELIVERED', blockchain_verification_status = 'VERIFIED', funded_at = ? WHERE id = ?`,
-    ).run(now, dropId);
+      [now, dropId],
+    );
   } else if (outcome.kind === 'mismatch') {
-    db.prepare(
+    await db.run(
       `UPDATE caredrop SET status = 'FAILED', blockchain_verification_status = 'MISMATCH', failure_reason = ? WHERE id = ?`,
-    ).run(outcome.reason, dropId);
+      [outcome.reason, dropId],
+    );
   } else if (outcome.kind === 'rpc_unavailable') {
-    db.prepare(`UPDATE caredrop SET blockchain_verification_status = 'RPC_UNAVAILABLE' WHERE id = ?`).run(dropId);
+    await db.run(`UPDATE caredrop SET blockchain_verification_status = 'RPC_UNAVAILABLE' WHERE id = ?`, [dropId]);
   } else {
-    db.prepare(`UPDATE caredrop SET blockchain_verification_status = 'PENDING' WHERE id = ?`).run(dropId);
+    await db.run(`UPDATE caredrop SET blockchain_verification_status = 'PENDING' WHERE id = ?`, [dropId]);
   }
 }

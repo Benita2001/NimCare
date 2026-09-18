@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { KeyPair, Signature } from '@nimiq/core';
+import { randomUUID } from 'node:crypto';
 
-process.env.DATABASE_PATH = ':memory:';
 process.env.NODE_ENV = 'test';
+await import('./loadEnv.js');
 
 const { app } = await import('./app.js');
 const { nimiqSignedMessageDigest } = await import('./services/nimiqSignedMessage.js');
@@ -59,10 +60,10 @@ describe('auth: real cryptographic wallet verification', () => {
     const { nonce } = nonceRes.body;
 
     const { db } = await import('./db/index.js');
-    db.prepare(`UPDATE auth_nonce SET expires_at = ? WHERE nonce = ?`).run(
+    await db.run(`UPDATE auth_nonce SET expires_at = ? WHERE nonce = ?`, [
       new Date(Date.now() - 1000).toISOString(),
       nonce,
-    );
+    ]);
 
     const signature = signChallenge(wallet, nonce);
     const verifyRes = await request(app)
@@ -93,7 +94,10 @@ describe('auth: real cryptographic wallet verification', () => {
 });
 
 describe('pairing + caredrop + authorization', () => {
-  it('rejects creating a CareDrop by a non-pair-member, and reused invite tokens', async () => {
+  // Each assertion below makes several real round trips to a live Neon
+  // Postgres instance over the network (not an in-memory DB), so this needs
+  // more than vitest's 5s default.
+  it('rejects creating a CareDrop by a non-pair-member, and reused invite tokens', { timeout: 20000 }, async () => {
     const a = KeyPair.generate();
     const b = KeyPair.generate();
     const stranger = KeyPair.generate();
@@ -140,6 +144,9 @@ describe('pairing + caredrop + authorization', () => {
 });
 
 describe('transaction verification (Critical Fix 3)', () => {
+  // Tx hashes must be unique per run against the real, persistent Neon
+  // database (not an in-memory DB that resets every run).
+  const runId = randomUUID();
   let tokenA: string;
   let tokenB: string;
   let addressA: string;
@@ -214,7 +221,7 @@ describe('transaction verification (Critical Fix 3)', () => {
     const refHex = Buffer.from(drop.reference, 'utf8').toString('hex');
     mockRpcTransaction({ recipientData: refHex });
 
-    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: 'TXHASH' });
+    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: `TXHASH-${runId}` });
     const fetched = await request(app).get(`/api/caredrops/${drop.id}`).set('authorization', `Bearer ${tokenA}`);
     expect(fetched.body.caredrop.status).toBe('DELIVERED');
     expect(fetched.body.caredrop.blockchainVerificationStatus).toBe('VERIFIED');
@@ -225,7 +232,7 @@ describe('transaction verification (Critical Fix 3)', () => {
     const refHex = Buffer.from(drop.reference, 'utf8').toString('hex');
     mockRpcTransaction({ recipientData: refHex, to: 'NQ07 9999 9999 9999 9999 9999 9999 9999 9999 9999' });
 
-    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: 'TXHASH2' });
+    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: `TXHASH2-${runId}` });
     const fetched = await request(app).get(`/api/caredrops/${drop.id}`).set('authorization', `Bearer ${tokenA}`);
     expect(fetched.body.caredrop.status).toBe('FAILED');
   });
@@ -235,7 +242,7 @@ describe('transaction verification (Critical Fix 3)', () => {
     const refHex = Buffer.from(drop.reference, 'utf8').toString('hex');
     mockRpcTransaction({ recipientData: refHex, value: 1 });
 
-    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: 'TXHASH3' });
+    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: `TXHASH3-${runId}` });
     const fetched = await request(app).get(`/api/caredrops/${drop.id}`).set('authorization', `Bearer ${tokenA}`);
     expect(fetched.body.caredrop.status).toBe('FAILED');
   });
@@ -245,7 +252,7 @@ describe('transaction verification (Critical Fix 3)', () => {
     const wrongRefHex = Buffer.from('NC:D:SOMEOTHERID', 'utf8').toString('hex');
     mockRpcTransaction({ recipientData: wrongRefHex });
 
-    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: 'TXHASH4' });
+    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: `TXHASH4-${runId}` });
     const fetched = await request(app).get(`/api/caredrops/${drop.id}`).set('authorization', `Bearer ${tokenA}`);
     expect(fetched.body.caredrop.status).toBe('FAILED');
     expect(fetched.body.caredrop.failureReason).toContain('reference mismatch');
@@ -256,14 +263,14 @@ describe('transaction verification (Critical Fix 3)', () => {
     const submitOne = await request(app)
       .post(`/api/caredrops/${dropOne.id}/submit`)
       .set('authorization', `Bearer ${tokenA}`)
-      .send({ txHash: 'SHARED_HASH' });
+      .send({ txHash: `SHARED_HASH-${runId}` });
     expect(submitOne.status).toBe(200);
 
     const dropTwo = await createDrop();
     const submitTwo = await request(app)
       .post(`/api/caredrops/${dropTwo.id}/submit`)
       .set('authorization', `Bearer ${tokenA}`)
-      .send({ txHash: 'SHARED_HASH' });
+      .send({ txHash: `SHARED_HASH-${runId}` });
     expect(submitTwo.status).toBe(409);
     expect(submitTwo.body.error).toBe('transaction_hash_already_used');
   });
@@ -271,7 +278,7 @@ describe('transaction verification (Critical Fix 3)', () => {
   it('6. stays pending (never fabricates success) when the RPC is unavailable', async () => {
     delete process.env.NIMIQ_RPC_URL;
     const drop = await createDrop();
-    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: 'TXHASH6' });
+    await request(app).post(`/api/caredrops/${drop.id}/submit`).set('authorization', `Bearer ${tokenA}`).send({ txHash: `TXHASH6-${runId}` });
     const fetched = await request(app).get(`/api/caredrops/${drop.id}`).set('authorization', `Bearer ${tokenA}`);
     expect(fetched.body.caredrop.status).toBe('PAYMENT_SUBMITTED');
     expect(fetched.body.caredrop.blockchainVerificationStatus).toBe('RPC_UNAVAILABLE');

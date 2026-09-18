@@ -54,8 +54,21 @@ Status values: TODO / IN_PROGRESS / DONE / BLOCKED. Update as work proceeds.
 
 - **NIM-027** [DONE] `README.md`, `LICENSE` (MIT), `.env.example` (both packages), `PRIVACY.md` finalized.
 - **NIM-028** [DONE] `SUBMISSION.md` with ≤250 word description, judge explanation, TODO-marked links for repo/live app/demo video/social posts.
-- **NIM-029** [BLOCKED — needs credentials] Production deployment (managed DB provisioning + hosting + `NIMIQ_RPC_URL`) — pending credentials per `PROJECT_PLAN.md` blockers.
-- **NIM-030** [TODO — human] Final rule audit against the live `miniappscompetition.com/rules` page immediately before submitting (this session's fetch noted a stale year on that page — re-check).
+- **NIM-029** [DONE] Production deployment — Vercel (frontend static + backend Vercel Function) + Neon Postgres via Vercel Marketplace. Live and health-checked: https://nimcare-app.vercel.app / https://nimcare-api.vercel.app. See `MEMORY.md` for provisioning steps and live smoke-test evidence.
+- **NIM-030** [TODO — human] Final rule audit against the live `miniappscompetition.com/rules` page immediately before submitting. Scoring page independently re-verified live on 2026-09-18 (45/25/15/10/5/100 — see `MEMORY.md`); re-check again right before submitting since it can change.
+
+## Phase 8 — Security Hardening (2026-09-18 Build Review)
+
+- **NIM-031** [DONE] Real cryptographic wallet authentication via `@nimiq/core` (`PublicKey`, `Signature`, address derivation), replacing the prior structural-only check. Origin-bound challenge message (server-configured `APP_ORIGIN`). 5 unit tests + 4 integration tests covering forgery, expiry, and replay — all passing.
+- **NIM-032** [DONE] Found and fixed a real off-by-one bug in the Nimiq address regex (was requiring 40 chars/10 groups instead of the correct 36 chars/9 groups) — discovered while testing against real `@nimiq/core`-generated addresses.
+- **NIM-033** [DONE] Purged `server/data/*.db` from git tracking (contained only synthetic smoke-test data, confirmed by inspection); gitignored `server/data/`, `*.db*`.
+- **NIM-034** [DONE] Transaction-to-CareDrop binding: `recipientData` (hex-decoded, confirmed against a real live mainnet transaction) must match the CareDrop's stored reference; transaction hashes are unique per CareDrop (DB constraint + route-level check); optional `executionResult`/`networkId` checks added from real RPC evidence. 6 integration tests covering all required scenarios.
+- **NIM-035** [DONE] Nimiq Pay deeplink support for invites (`nimiqpay://` and `https://nimpay.app/miniapps/open/...`), kept alongside the short invite-code fallback since query-param preservation through the deeplink is undocumented; added a real "Open NimCare in Nimiq Pay" conversion screen instead of only an error when opened outside Nimiq Pay, and a manual invite-code entry field on Home.
+- **NIM-036** [DONE] Production-safe CORS (origin allowlist via `ALLOWED_ORIGINS`, fails closed in production without it) and session tokens now stored as SHA-256 hashes rather than plaintext.
+- **NIM-037** [DONE] RPC hardening: confirmed `https://rpc.nimiqwatch.com` live and reachable; it's now the default `NIMIQ_RPC_URL`. Optional `NIMIQ_NETWORK_ID` guard added (mainnet=24 observed live), left unset by default pending testnet confirmation.
+- **NIM-038** [DONE] `app/` lint (oxlint) clean, both packages typecheck/build clean, 20 total tests passing (up from 4) against the real production Postgres database — not mocks.
+- **NIM-039** [DONE] Migrated `server/` from `better-sqlite3` (unsuitable for serverless) to Postgres (`pg`, Neon via Vercel Marketplace) to support real production deployment — schema, all routes, and the verification service converted to async.
+- **NIM-040** [TODO — human] Run `DEVICE_TESTING.md`'s two-phone protocol on real hardware; fill in real PASS/FAIL results.
 
 ## Scope change protocol
 

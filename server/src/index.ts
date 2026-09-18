@@ -1,3 +1,4 @@
+import './loadEnv.js';
 import { app } from './app.js';
 
 const isProduction = process.env.NODE_ENV === 'production';

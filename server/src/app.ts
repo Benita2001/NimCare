@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import './db/index.js';
+import { ensureMigrated } from './db/index.js';
 import { authRouter } from './routes/auth.js';
 import { pairsRouter } from './routes/pairs.js';
 import { caredropsRouter } from './routes/caredrops.js';
@@ -27,6 +27,13 @@ app.use(
 );
 app.use(express.json());
 
+// Ensures the Postgres schema exists before any request is handled. On
+// Vercel Functions this runs once per cold start of a given instance;
+// CREATE TABLE IF NOT EXISTS makes repeated calls harmless.
+app.use((_req, res, next) => {
+  ensureMigrated().then(() => next()).catch(next);
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
@@ -38,3 +45,9 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/pairs', pairsRouter);
 app.use('/api/caredrops', caredropsRouter);
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error(err);
+  if (!res.headersSent) res.status(500).json({ error: 'internal_error' });
+});

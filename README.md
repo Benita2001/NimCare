@@ -23,21 +23,25 @@ Nimiq Pay gives NimCare wallet-native identity, native transaction approval, rea
 
 ## What's real vs. what's disclosed as unverified
 
-This repository is transparent about what has and hasn't been proven in this build environment (no physical Nimiq Pay device or funded wallet was available while building):
+This repository is transparent about what has and hasn't been proven, and updates this section rather than leaving stale claims in place:
 
-- ✅ **Real, working**: wallet connect flow and its full error handling (verified live — see `MEMORY.md`), pairing/invite flow, CareDrop creation, the `sendBasicTransactionWithData` call wired to the verified SDK contract, server-side transaction verification logic against the documented Nimiq JSON-RPC schema, the full CareDrop state machine, sealed-note authorization, and the Memory timeline — all proven end-to-end against a real local database (see the Phase 0 smoke test recorded in `MEMORY.md`).
-- ⚠️ **Structural, not cryptographic (yet)**: wallet-session signature verification checks nonce validity and structure but does not yet perform full cryptographic verification of the Nimiq `sign()` output — see `TRD.md` Spike S5 and `server/src/routes/auth.ts`.
-- ⚠️ **Requires configuration**: server-side transaction verification needs a real `NIMIQ_RPC_URL` (a Nimiq node's own RPC endpoint — no public default is documented). Without it, CareDrops honestly report "verification pending," never a fabricated "verified."
-- ⚠️ **Requires a human with a device**: on-device testing inside the real Nimiq Pay app, with two funded wallets, has not been performed in this environment. Nimiq Pay's testnet has a free-NIM faucet (see `MEMORY.md`) that makes this cheap to do.
+- ✅ **Real, working, live in production**: wallet connect + its full error handling, real cryptographic wallet authentication (`@nimiq/core` signature verification, not just structural checks — see `server/src/services/nimiqSignedMessage.ts`), pairing/invite flow, CareDrop creation, real `sendBasicTransactionWithData` payments, server-side transaction verification against a real public Nimiq RPC endpoint (`https://rpc.nimiqwatch.com`, confirmed reachable and returning real mainnet data), transaction-to-CareDrop binding (on-chain reference + unique-hash enforcement), the full CareDrop state machine, sealed-note authorization, and the Memory timeline. All proven end-to-end against the live production deployment with a real Postgres database — see `MEMORY.md` for exact commands and results.
+- ⚠️ **Not yet tested on a physical device**: nothing here has been run inside the real Nimiq Pay app on a phone. See `DEVICE_TESTING.md` for the exact protocol and its current `UNTESTED` rows.
+- ⚠️ **Testnet vs. mainnet for the live demo**: the configured RPC endpoint was verified against mainnet data during hardening; whether it also serves testnet is unconfirmed — see `DEVICE_TESTING.md`'s prerequisites before funding a demo wallet.
 
 See `PROJECT_PLAN.md`, `TRD.md`, and `MEMORY.md` for full detail and evidence sourcing.
 
 ## Architecture
 
-- `app/` — Vite + React + TypeScript Mini App using `@nimiq/mini-app-sdk`.
-- `server/` — Express + TypeScript API, SQLite (dev) persistence, Nimiq JSON-RPC verification service.
+- `app/` — Vite + React + TypeScript Mini App using `@nimiq/mini-app-sdk`. Deployed as a static site on Vercel.
+- `server/` — Express + TypeScript API (deployed as a Vercel Function via `server/api/index.ts`), Postgres (Neon, provisioned via the Vercel Marketplace) persistence, Nimiq JSON-RPC verification service.
 
 See `TRD.md` for the full technical design, data model, and API contracts.
+
+## Live deployment
+
+- Frontend: https://nimcare-app.vercel.app
+- API: https://nimcare-api.vercel.app (health check: `/api/health`)
 
 ## Installation & development
 
@@ -47,7 +51,8 @@ Requires Node.js 22+ (built and tested on Node 24).
 # Backend
 cd server
 npm install
-cp .env.example .env   # fill in NIMIQ_RPC_URL if you have one
+vercel env pull .env.local   # pulls the real Neon DATABASE_URL (requires `vercel link` once)
+# or: cp .env.example .env and fill in DATABASE_URL yourself
 npm run dev             # http://localhost:8787
 
 # Frontend (separate terminal)
@@ -72,7 +77,7 @@ See `server/.env.example` and `app/.env.example`. No secrets are committed to th
 
 ## Deployment
 
-Not yet deployed. Production needs a real managed database (SQLite is dev-only and unsuitable for serverless/production hosting) and a configured `NIMIQ_RPC_URL` — both require credentials/infrastructure not available while building this submission. See `PROJECT_PLAN.md` § Major Blockers.
+Live on Vercel: frontend (static Vite build) and backend (Express app served as a Vercel Function, `server/api/index.ts` + `server/vercel.json`) are separate Vercel projects, connected to this GitHub repo for CI. The database is a real Postgres instance (Neon) provisioned through the Vercel Marketplace — not SQLite, which is unsuitable for serverless (ephemeral filesystem). `NIMIQ_RPC_URL`, `APP_ORIGIN`, and `ALLOWED_ORIGINS` are set as real production environment variables (see `server/.env.example` for what each does — no secrets are in this repo).
 
 ## Privacy & security
 
@@ -80,7 +85,7 @@ See `PRIVACY.md`. No private keys or seed phrases are ever collected. Private no
 
 ## Hackathon context
 
-Built for the Nimiq Mini Apps Competition, Cycle II ($17,000 prize pool). See `SUBMISSION.md` for the submission package and `PROJECT_PLAN.md` for the full planning trail.
+Built for the Nimiq Mini Apps Competition, Cycle II ($17,000 prize pool). See `SUBMISSION.md` for the submission package, `JUDGES.md` for how NimCare maps to the current scoring rubric with evidence, `DEVICE_TESTING.md` for the on-device test protocol, and `PROJECT_PLAN.md` for the full planning trail.
 
 ## License
 

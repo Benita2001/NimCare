@@ -109,16 +109,17 @@ No smart contracts, no escrow, no AI, no multi-chain, no social feed, no mobile 
 | Requirement / Rubric | Source | Importance | Product behavior | Implementation | Verification | Demo / Submission proof | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Built as Nimiq Pay Mini App | Organizer rules | Required | App loads inside Nimiq Pay | `@nimiq/mini-app-sdk` `init()` | Manual device test | Screen recording | UNKNOWN |
-| Real NIM support | Scoring: Nimiq integration (25) | High | CareDrop payments are real NIM transfers | `sendBasicTransactionWithData()` | Spike 2/3 | Live tx hash + explorer link | UNKNOWN |
-| Wallet integration | Scoring: Nimiq integration | High | Wallet-native onboarding, no password auth | `listAccounts()`, session via signature | Spike 1/5 | Demo walkthrough | UNKNOWN |
-| Transaction verification | P0.7 | High | Server never trusts client-only success | RPC lookup by hash | Spike 4 | Server logs / DB row | UNKNOWN |
-| Functionality/reliability (45 pts) | Scoring | Critical | Critical Demo Path completes without crash | All P0 | Manual E2E run | Demo video | PLANNED |
-| Real usage (15 pts) | Scoring | Medium | Organic pairing/sharing drives new wallets | Invite links | N/A (behavioral) | Post-launch, not controllable pre-submission | N/A |
-| Design & UX (10 pts) | Scoring | Medium | Warm, premium, non-crypto-dashboard feel | `DESIGN.md` + Phase 5 | Visual QA pass | Screenshots | PLANNED |
+| Real NIM support | Scoring: Nimiq integration (25) | High | CareDrop payments are real NIM transfers | `sendBasicTransactionWithData()` | Live prod smoke test | `MEMORY.md` (RPC evidence) | VERIFIED (SDK contract + live RPC lookup); on-device tx send still UNTESTED |
+| Wallet integration | Scoring: Nimiq integration | High | Wallet-native onboarding, real cryptographic session auth | `listAccounts()` + `@nimiq/core` signature verify | 5 unit + 4 integration tests | `server/src/services/nimiqSignedMessage.test.ts` | VERIFIED (real keypair round-trip); on-device UNTESTED |
+| Transaction verification | P0.7 | High | Server never trusts client-only success; binds tx to exact CareDrop | Real RPC lookup + recipientData match + unique-hash | 6 integration tests + live prod smoke test | `server/src/integration.test.ts`, `MEMORY.md` | VERIFIED |
+| Functionality/reliability (45 pts) | Scoring | Critical | Critical Demo Path completes without crash | All P0 + hardening fixes | 20 automated tests, live prod smoke test | `MEMORY.md` | VERIFIED (server-side); on-device UI walkthrough UNTESTED — see `DEVICE_TESTING.md` |
+| Real usage (15 pts) | Scoring | Medium | Organic pairing/sharing drives new wallets | Invite links (+ Nimiq Pay deeplink) | N/A (behavioral) | Post-launch, not controllable pre-submission | N/A |
+| Design & UX (10 pts) | Scoring | Medium | Warm, premium, non-crypto-dashboard feel | `DESIGN.md` + Phase 5 | Visual QA pass (browser tool, mobile viewport) | Live at nimcare-app.vercel.app | VERIFIED (rendered) |
 | Builder promotion (5 pts) | Scoring | Low | Public social/Skool post | N/A | N/A | Links in `SUBMISSION.md` | TODO (human action) |
-| Public GitHub, MIT license | Organizer rules | Required | Repo public, `LICENSE` file | Create `LICENSE` (MIT) | File exists | Repo URL | TODO |
-| Privacy disclosure | Organizer rules | Required | No undisclosed data collection | `PRIVACY.md` + in-app privacy screen | Manual review | Repo + in-app | PLANNED |
-| No secrets committed | Organizer rules / eng | Required | `.env` never committed | `.env.example` only | `git status` / grep | Repo | PLANNED |
+| Public GitHub, MIT license | Organizer rules | Required | Repo public, `LICENSE` file | `LICENSE` (MIT) | File exists | https://github.com/Benita2001/NimCare | DONE |
+| Privacy disclosure | Organizer rules | Required | No undisclosed data collection | `PRIVACY.md` | Manual review | Repo | DONE |
+| No secrets committed | Organizer rules / eng | Required | `.env`/`.env.local` never committed | `.env.example` only, gitignored | `git status` / grep; DB files purged from tracking 2026-09-18 | Repo | DONE |
+| Real deployment | Organizer rules ("fully functional") | Required | Live, working, publicly reachable app | Vercel + Neon Postgres | `curl /api/health`, live smoke test | https://nimcare-app.vercel.app | DONE |
 
 ## 7. Assumption Register
 
@@ -209,15 +210,15 @@ Never include secrets or private keys in this file.
 
 ## 14. Current State
 
-**Current phase:** Phase 6/7 (Quality hardening + Submission docs) for the implemented vertical slice; Phases 0–4 complete for everything buildable without a physical device.
-**Current milestone:** Full Critical Demo Path implemented and proven at the API/data layer via a live end-to-end smoke test (pair → invite → accept → CareDrop → payment submit → degraded verification → response → completion → memory), plus a live in-browser UI check of the wallet-connect error path. See `MEMORY.md` for exact evidence.
-**Primary blocker:** No confirmed physical Nimiq Pay device/funded wallet in this environment (blocks NIM-026 on-device UI proof) and no confirmed production database/Nimiq RPC credentials (blocks NIM-029 deployment). Both are explicit, disclosed human actions — not silently worked around.
-**Next phase condition:** A human runs NIM-026 (real device test) and provides deployment credentials for NIM-029; then final rule audit (NIM-030) and submission.
+**Current phase:** Phase 7 (Demo/Submission hardening) — security hardening complete, real production deployment live.
+**Current milestone:** Full Critical Demo Path implemented and proven end-to-end against the **live production deployment** (real cryptographic wallet auth, real Postgres, real Nimiq RPC verification) — see `MEMORY.md` for exact commands and results. 20 automated tests passing against the real production-grade database. Deployment: https://nimcare-app.vercel.app (frontend), https://nimcare-api.vercel.app (API + Neon Postgres via Vercel Marketplace).
+**Primary blocker:** No confirmed physical Nimiq Pay device in this environment — blocks NIM-026 on-device UI proof only. Deployment (formerly NIM-029) is no longer blocked: a real Vercel + Neon Postgres deployment exists and was proven live.
+**Next phase condition:** A human runs NIM-026 (real two-phone device test per `DEVICE_TESTING.md`); then final rule/scoring audit (NIM-030, noting the live scoring page currently shows 45/25/15/10/5/100 — re-verified 2026-09-18) and submission.
 
 ## 15. Major Blockers
 
-* No confirmed access to a physical Nimiq Pay app / funded test wallet in this coding environment — real payment/signature spikes can be implemented against documented contracts but not device-verified without human involvement.
-* No production database credentials confirmed yet — local dev DB will be used; production deployment is a human action pending credentials.
+* No confirmed access to a physical Nimiq Pay app in this coding environment — the full on-device UI walkthrough (`DEVICE_TESTING.md`) requires a human with a phone. All server-side logic this would exercise (auth, verification, state transitions, authorization) is proven by 20 automated tests against the real production database instead.
+* Whether the production RPC (`https://rpc.nimiqwatch.com`) serves testnet data, not just the mainnet data confirmed during hardening, is unverified — see `DEVICE_TESTING.md` prerequisites before funding a demo wallet on a specific network.
 
 ## 16. Deferred Until Core Is Stable
 
