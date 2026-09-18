@@ -65,7 +65,7 @@ body { overflow-x: hidden; }
 .screen {
   max-width: 480px;
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: max(20px, env(safe-area-inset-top)) 20px calc(48px + env(safe-area-inset-bottom));
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -105,38 +105,65 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
 .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--color-text-muted); text-transform: uppercase; }
 
 /* --- Hero (Home / Welcome) --- */
-.hero {
-  position: relative;
-  padding: 28px 0 8px;
-  text-align: center;
+.hero-shell {
+  display: block;
+  padding: 12px 0 8px;
 }
-.hero-decor {
-  position: relative;
-  height: 64px;
-  margin-bottom: 4px;
-}
-.floaty {
-  position: absolute;
-  width: 52px;
-  height: 52px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+.hero-center { text-align: center; }
+.hero-cluster { display: none; } /* desktop-only clusters, shown at the wide breakpoint below */
+
+.hero-mobile-char {
+  width: 148px;
+  height: 148px;
+  margin: 0 auto 8px;
   animation: float 4.5s ease-in-out infinite;
 }
-.floaty-1 { background: var(--color-accent-soft); left: 6%; top: 0; animation-delay: 0s; }
-.floaty-2 { background: var(--color-sky-soft); left: 26%; top: 20px; width: 40px; height: 40px; font-size: 18px; animation-delay: 0.6s; }
-.floaty-3 { background: var(--color-gold-soft); right: 22%; top: 4px; animation-delay: 1.1s; }
-.floaty-4 { background: var(--color-green-soft); right: 4%; top: 24px; width: 40px; height: 40px; font-size: 18px; animation-delay: 1.6s; }
+.hero-char { width: 100%; height: 100%; display: block; color: var(--color-border); }
+
+.trust-row {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.trust-row span { display: inline-flex; align-items: center; gap: 6px; }
+
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(-2deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .floaty { animation: none; }
+  .hero-mobile-char, .hero-char-main, .hero-char-secondary, .hero-char-tertiary, .hero-accent { animation: none !important; }
+}
+
+/* Desktop: three-part flanking composition. Only the app's marketing-style
+   entry screens (Welcome, Home) opt into the wide shell via .screen-wide;
+   every functional in-flow screen keeps the narrow single-column layout. */
+@media (min-width: 900px) {
+  .screen.screen-wide { max-width: 1120px; }
+  .hero-shell {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1fr;
+    align-items: center;
+    gap: 24px;
+    padding: 40px 0 24px;
+  }
+  .hero-mobile-char { display: none; }
+  .hero-cluster {
+    display: block;
+    position: relative;
+    height: 340px;
+  }
+  .hero-char-main { position: absolute; left: 12%; top: 18%; width: 190px; height: 190px; animation: float 5s ease-in-out infinite; }
+  .hero-char-secondary { position: absolute; right: 18%; top: 6%; width: 150px; height: 150px; animation: float 4.2s ease-in-out infinite 0.4s; }
+  .hero-char-tertiary { position: absolute; right: -4%; bottom: 4%; width: 150px; height: 150px; animation: float 4.8s ease-in-out infinite 0.9s; }
+  .hero-accent { position: absolute; width: 26px; height: 26px; animation: float 3.6s ease-in-out infinite; }
+  .hero-accent-a { left: 2%; top: 8%; }
+  .hero-accent-b { left: 30%; bottom: 10%; width: 22px; height: 22px; }
+  .hero-accent-c { left: 40%; top: 2%; }
 }
 
 /* --- Buttons --- */
@@ -167,7 +194,7 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
   background: var(--color-surface);
   border-radius: var(--radius-sm);
   padding: 13px 16px;
-  font-size: 15px;
+  font-size: 16px; /* >=16px avoids iOS Safari auto-zoom on focus */
   color: var(--color-text);
   font-family: inherit;
   min-height: 50px;

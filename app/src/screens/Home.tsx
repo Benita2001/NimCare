@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from '../sessionContext';
 import { api, type CareDropType } from '../api/client';
 import { shortenAddress } from '../lib/luna';
-import { HeroDecor } from '../components/HeroDecor';
+import { EnvelopeCharacter, MusicCharacter, MovieCharacter, Sparkle, HeartAccent } from '../components/Illustrations';
 
 const TYPE_ICON_CLASS: Record<string, string> = {
   PHOTO: 'type-card-photo',
@@ -39,16 +39,29 @@ export function HomeScreen({
   }, [sessionToken]);
 
   return (
-    <div className="screen">
+    <div className="screen screen-wide">
       <header className="app-header">
-        <span className="app-header-logo">NimCare</span>
+        <span className="app-header-logo">💌 NimCare</span>
         <span className="wallet-chip">{address ? shortenAddress(address) : ''}</span>
       </header>
 
-      <div className="hero">
-        <HeroDecor />
-        <h1>Make their day.</h1>
-        <p className="subtitle">Send a moment, not just money.</p>
+      <div className="hero-shell">
+        <div className="hero-cluster hero-cluster-left">
+          <EnvelopeCharacter className="hero-char hero-char-main" />
+          <Sparkle className="hero-accent hero-accent-a" />
+          <HeartAccent className="hero-accent hero-accent-b" />
+        </div>
+
+        <div className="hero-center">
+          <div className="hero-mobile-char"><EnvelopeCharacter className="hero-char" /></div>
+          <h1>Make their day.</h1>
+          <p className="subtitle">Send a moment, not just money.</p>
+        </div>
+
+        <div className="hero-cluster hero-cluster-right">
+          <MusicCharacter className="hero-char hero-char-secondary" />
+          <MovieCharacter className="hero-char hero-char-tertiary" />
+        </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -58,7 +71,10 @@ export function HomeScreen({
         {types.map((t) => (
           <button key={t.type} className="type-card" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }} onClick={() => onSendType(t.type)}>
             <span className={`type-card-icon ${TYPE_ICON_CLASS[t.type] ?? ''}`}>{t.emoji}</span>
-            <span className="type-card-title">{t.cardTitle}</span>
+            <span>
+              <span className="type-card-title" style={{ display: 'block' }}>{t.cardTitle}</span>
+              <span className="hint">{t.type === 'PHOTO' ? 'Send a photo, a little note and something extra.' : t.type === 'PLAYLIST' ? 'Share a song or playlist with a little NIM.' : t.type === 'MOVIE' ? 'Turn a small gift into movie night.' : 'A little treat, just because.'}</span>
+            </span>
           </button>
         ))}
       </div>

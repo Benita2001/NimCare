@@ -1,6 +1,6 @@
 # DESIGN — NimCare
 
-> **2026-09-18 redesign**: visual system replaced per a Family.co-inspired brief (playful consumer-product energy, oversized editorial typography, spacious composition, floating illustrations) while staying unmistakably NimCare. The pre-redesign terracotta/serif system (still visible at git tag `pre-media-caredrop-pivot`) is superseded below.
+> **2026-09-18 redesign (round 2)**: replaced generic floating emoji chips with real original "character" illustrations (`app/src/components/Illustrations.tsx` — an envelope character, a vinyl+headphones character, a popcorn/movie character, plus small sparkle/heart accents), composed into a genuine two-sided desktop hero (left/center/right, via `.hero-shell` + `.screen-wide`) that collapses to a single hero character above the headline on mobile. A compact on-page "How it works" section with three colored feature cards was added below the Welcome hero, replacing a plain hint line. See the round-1 notes below for the base palette/typography system, which is unchanged.
 
 ## Visual direction
 
@@ -30,9 +30,11 @@ Headline (`h1`): 38px/800 weight mobile, 48px/800 at ≥640px, tight letter-spac
 
 Single-column, max-width 480px mobile / 560px at ≥640px, centered. The hero pattern (`--hero`, `.hero-decor`) puts a row of four floating icon chips above the headline, then the headline, then 1–2 lines of supporting copy — deliberately spare, matching the brief's "do not put a lot of copy underneath" instruction. No horizontal scroll at 375px width (verified in-browser).
 
-## The floating-icon "illustration" system — and its honest scope limit
+## The illustration system (round 2) — and its honest scope limit
 
-The design brief asked for a full original illustrated character system (a smiling envelope, a vinyl character, a camera, etc., in a coherent 2D flat-illustration style). **That was not built in this pass** — a bespoke SVG illustration library is a substantial, separate design effort that didn't fit the available time alongside the rest of the pivot/hardening work already shipped this session. Instead, `app/src/components/HeroDecor.tsx` implements a lighter version of the same idea: soft-colored circular chips (using the type-color palette above) each carrying a single emoji glyph, gently floating (`@keyframes float`, respects `prefers-reduced-motion`). It reads as playful and on-brand at a glance, and is honestly disclosed here as a scope tradeoff rather than presented as the originally-briefed illustration system. Upgrading to real bespoke illustrations remains open P1 work.
+`app/src/components/Illustrations.tsx` now has three real original inline-SVG characters — a rounded envelope with a face, arms and a small heart badge (the primary NimCare brand object); a vinyl-record character wearing headphones; and a popcorn-tub character — plus small sparkle/heart accent glyphs. They're composed into a genuine two-sided hero (`.hero-cluster-left` / `.hero-cluster-right`, positioned via CSS Grid at the ≥900px breakpoint) that collapses to one character above the headline on mobile (`.hero-mobile-char`), matching the brief's "one strong hero illustration, not scattered floating icons" direction.
+
+**Still an honest scope limit, not silently resolved**: these are simple flat-shape vector drawings (circles, rounded rects, basic paths), not a full illustrated-character studio pass with painted textures, varied poses per screen, or a complete motif library (the brief also suggested a photo card, gift box, coin, speech bubble, tape/scrapbook accents — not all built). What exists is real, original, and reads as "a character with a face," which is a genuine step up from generic emoji chips — but it is not the full bespoke illustration system a dedicated designer would produce. Expanding the motif set and adding per-screen variety remains open P1 work.
 
 ## Component patterns
 
@@ -49,7 +51,15 @@ Every async screen implements idle/loading/success/failure explicitly: connect w
 
 ## Responsive behavior
 
-Single breakpoint target for the app shell (phone WebView, ~375–430px), with a light desktop widening (560px content width, 48px headline) verified in-browser at full desktop width for the hero — this Mini App is primarily consumed inside Nimiq Pay's mobile WebView, so mobile is the design priority, not desktop.
+Mobile is the design priority (this is a Mini App consumed inside Nimiq Pay's phone WebView), with a genuine desktop composition layered on top for browser/marketing viewing, not the other way around:
+
+- **< 640px (primary target)**: single-column `.screen`, 480px max-width, 20px gutters. Hero collapses to one character above the headline (`.hero-mobile-char`, 148×148px) — no side clusters. Verified with zero horizontal overflow at 320px, 375px, 390px in both light and dark color schemes.
+- **640–899px**: `.screen` widens to 560px, headline scales to 48px; hero clusters still hidden (not enough room for a real three-column composition without cramming).
+- **≥ 900px (`.screen-wide`, Welcome/Home only)**: full three-part hero grid (left character cluster / headline+CTA column / right character cluster), verified at 1280px.
+- **Inputs**: 16px minimum font size (`.input`) specifically to avoid iOS Safari's auto-zoom-on-focus behavior, which would otherwise break the composer's amount/caption fields.
+- **Safe areas**: `.screen` padding uses `env(safe-area-inset-top/bottom)` (`viewport-fit=cover` set in `index.html`) so content and buttons don't collide with a notch or home indicator on supporting devices. No dedicated sticky bottom action bar was built this pass — every screen's primary CTA is the last flex child in a scrollable column instead, which is simpler and avoids keyboard-overlap bugs, at the cost of the CTA not always being pinned to the bottom edge.
+- **Touch targets**: buttons ≥52px tall, pills ≥46px, all comfortably above the 44×44px accessibility minimum.
+- Functional in-flow screens (Composer, Reveal, Loop, Share Success) deliberately stay single-column/narrow at every width — the wide three-column treatment is reserved for the two "arrival" screens (Welcome, Home) where there's real marketing-style content to compose with, not for task-focused flows.
 
 ## Accessibility
 
