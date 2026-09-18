@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SessionProvider } from './session';
 import { useSession } from './sessionContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { WelcomeScreen } from './screens/Welcome';
 import { HomeScreen } from './screens/Home';
 import { ComposerScreen } from './screens/Composer';
@@ -71,8 +72,10 @@ function Router() {
 
 export default function App() {
   return (
-    <SessionProvider>
-      <Router />
-    </SessionProvider>
+    <ErrorBoundary>
+      <SessionProvider>
+        <Router />
+      </SessionProvider>
+    </ErrorBoundary>
   );
 }

@@ -122,6 +122,33 @@ describe('pairing + caredrop + authorization (2026-09-18 pivot: surprise-first, 
     expect(loopsA.body.pairs[0].relationship_type).toBeFalsy();
   });
 
+  it('excludes legacy PENDING pair rows (member_b_wallet still NULL) from /pairs/mine — the 2026-09-18 blank-screen hotfix', { timeout: 20000 }, async () => {
+    // Reproduces the exact production incident: a stale pre-pivot invite row
+    // (created by the old, now-unused invite/accept flow) with
+    // member_b_wallet still NULL. Before the hotfix, /pairs/mine returned
+    // this row to the client, which computed `other = null` and crashed
+    // rendering `shortenAddress(null)` -- a real row of this shape was
+    // found in production during this audit (see MEMORY.md). This test
+    // inserts that exact shape directly (the current API can no longer
+    // create such a row) and proves the server now filters it out.
+    const a = KeyPair.generate();
+    const { address: addressA, verifyRes: aLogin } = await loginWallet(a);
+    const tokenA = aLogin.body.sessionToken;
+
+    const { db } = await import('./db/index.js');
+    const { randomUUID } = await import('node:crypto');
+    const legacyPairId = randomUUID();
+    await db.run(
+      `INSERT INTO pair (id, member_a_wallet, member_b_wallet, relationship_type, status, created_at)
+       VALUES (?, ?, NULL, NULL, 'PENDING', ?)`,
+      [legacyPairId, addressA, new Date().toISOString()],
+    );
+
+    const loops = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenA}`);
+    expect(loops.status).toBe(200);
+    expect(loops.body.pairs.some((p: any) => p.id === legacyPairId)).toBe(false);
+  });
+
   it('rejects invalid recipient addresses and self-sends', async () => {
     const a = KeyPair.generate();
     const { address: addressA, verifyRes: aLogin } = await loginWallet(a);

@@ -4,6 +4,7 @@ import { useSession } from '../sessionContext';
 import { api, type CareDropType } from '../api/client';
 import { shortenAddress } from '../lib/luna';
 import { EnvelopeCharacter, MusicCharacter, MovieCharacter, PolaroidStack, Sparkle, HeartAccent, Blob, PhotoIcon, MusicIcon, MovieIcon, GiftIcon } from '../components/Illustrations';
+import { markStage } from '../diagnostics';
 
 const TYPE_ICON_CLASS: Record<string, string> = {
   PHOTO: 'type-card-photo',
@@ -39,6 +40,7 @@ export function HomeScreen({
   const [loops, setLoops] = useState<any[] | null>(null);
   const [types, setTypes] = useState<CareDropType[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [typesError, setTypesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionToken) return;
@@ -47,11 +49,40 @@ export function HomeScreen({
       .then((res) => {
         setLoops(res.pairs);
         onLoopsLoaded(res.pairs);
+        markStage('HOME:loops:loaded');
       })
-      .catch((err) => setError(err.message));
-    api.careDropTypes().then((res) => setTypes(res.types));
+      .catch((err) => setError(err instanceof Error ? err.message : 'Could not load your Loops.'));
+    api
+      .careDropTypes()
+      .then((res) => {
+        setTypes(res.types);
+        markStage('HOME:types:loaded');
+      })
+      .catch((err) => setTypesError(err instanceof Error ? err.message : 'Could not load CareDrop types.'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
+
+  useEffect(() => {
+    markStage('HOME:render:ok');
+  }, []);
+
+  /**
+   * Never trust a Loop row enough to crash on it — a stale/malformed row
+   * (e.g. a legacy pair with a missing member, or any other unexpected
+   * shape) is skipped rather than rendered. The server-side /pairs/mine
+   * query already excludes legacy PENDING rows (see pairs.ts), but this is
+   * a second, independent layer of defense: client code must never assume
+   * the API response is well-formed. See MEMORY.md 2026-09-18 hotfix.
+   */
+  function resolveOtherWallet(loop: any): string | null {
+    if (!loop || typeof loop !== 'object') return null;
+    const a = loop.member_a_wallet;
+    const b = loop.member_b_wallet;
+    if (typeof a !== 'string' || !a || typeof b !== 'string' || !b) return null;
+    if (a === address) return b;
+    if (b === address) return a;
+    return null; // current wallet isn't actually part of this row — skip it
+  }
 
   return (
     <div className="screen screen-wide">
@@ -86,6 +117,14 @@ export function HomeScreen({
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+      {typesError && (
+        <div className="alert alert-error">
+          <p>{typesError}</p>
+          <button className="btn btn-ghost" onClick={() => api.careDropTypes().then((res) => { setTypes(res.types); setTypesError(null); }).catch((err) => setTypesError(err instanceof Error ? err.message : 'Could not load CareDrop types.'))}>
+            Try again
+          </button>
+        </div>
+      )}
 
       <p className="eyebrow">What are you sending?</p>
       <div className="type-grid">
@@ -116,7 +155,14 @@ export function HomeScreen({
       {loops && loops.length > 0 && (
         <div className="loop-list">
           {loops.map((l) => {
-            const other = l.member_a_wallet === address ? l.member_b_wallet : l.member_a_wallet;
+            const other = resolveOtherWallet(l);
+            if (!other) {
+              if (import.meta.env.DEV) {
+                // eslint-disable-next-line no-console
+                console.warn('Skipping malformed Loop row (missing/invalid member):', l);
+              }
+              return null;
+            }
             return (
               <button key={l.id} className="loop-card" onClick={() => onOpenLoop(l.id)}>
                 <span>

@@ -17,7 +17,17 @@ export function lunaToNim(luna: number): string {
   return `${whole}.${String(frac).padStart(5, '0')}`.replace(/0+$/, '').replace(/\.$/, '');
 }
 
-export function shortenAddress(address: string): string {
+/**
+ * UI-only crash protection — never a substitute for authorization
+ * validation. A malformed/missing address (e.g. a stale legacy pair row
+ * with a null member) must never throw during render; it falls back to a
+ * safe display string instead. See MEMORY.md 2026-09-18 blank-screen hotfix.
+ */
+export function shortenAddress(address?: string | null): string {
+  if (typeof address !== 'string' || address.trim().length === 0) {
+    return 'Unknown wallet';
+  }
   const compact = address.replace(/\s+/g, '');
+  if (compact.length <= 10) return compact;
   return `${compact.slice(0, 6)}…${compact.slice(-4)}`;
 }

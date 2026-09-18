@@ -128,10 +128,18 @@ pairsRouter.get(
   '/mine',
   requireSession,
   asyncHandler(async (req: any, res) => {
-    const pairs = await db.all(`SELECT * FROM pair WHERE member_a_wallet = ? OR member_b_wallet = ?`, [
-      req.walletAddress,
-      req.walletAddress,
-    ]);
+    // Only genuinely current Loops: ACCEPTED with both members set. Legacy
+    // pre-pivot PENDING invite rows (member_b_wallet still NULL, from the
+    // old invite/accept flow) are excluded here rather than deleted — they
+    // stay in the DB for historical/audit purposes but must never reach the
+    // current Home UI, which would crash trying to display a null member.
+    // See MEMORY.md 2026-09-18 blank-screen hotfix.
+    const pairs = await db.all(
+      `SELECT * FROM pair
+       WHERE status = 'ACCEPTED' AND member_b_wallet IS NOT NULL
+         AND (member_a_wallet = ? OR member_b_wallet = ?)`,
+      [req.walletAddress, req.walletAddress],
+    );
     res.json({ pairs });
   }),
 );

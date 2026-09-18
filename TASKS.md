@@ -99,6 +99,18 @@ Checkpoint before this audit: git tag `pre-release-audit` at commit `24a1e03`.
 - **NIM-056** [TODO — low priority] CORS rejection for a disallowed origin returns a bare 500 instead of a clean 4xx (functionally safe — no ACAO header either way — but not clean). Not fixed in this pass; low risk, cosmetic.
 - **NIM-057** [TODO] Playlist/Movie CareDrop types still lack their own dedicated live smoke test (same gap as NIM-050) — Photo and Treat remain the only types proven end-to-end against production.
 
+## Phase 11 — Real-Device Blank-Screen Hotfix (2026-09-18)
+
+Triggered by a real on-device report inside Nimiq Pay: after a successful wallet connect + sign-in, Home rendered a completely blank warm-white screen with no visible error.
+
+- **NIM-058** [DONE] Root-caused and confirmed via code inspection + a live production data count (1 legacy `PENDING`/`member_b_wallet IS NULL` row out of 39) + a direct crash reproduction of `shortenAddress(null)`. Full evidence trail in `MEMORY.md`.
+- **NIM-059** [DONE] `GET /api/pairs/mine` now filters `status = 'ACCEPTED' AND member_b_wallet IS NOT NULL`; legacy rows stay in the DB (no destructive migration), just excluded from the current Loop UI. New regression test proves it (24/24 tests passing).
+- **NIM-060** [DONE] `shortenAddress` hardened to accept `string | null | undefined` and never throw; `Home.tsx` adds an independent `resolveOtherWallet()` validation layer that skips malformed rows instead of rendering them.
+- **NIM-061** [DONE] Root `ErrorBoundary` component added, wrapping the whole app in `App.tsx` — any future uncaught render exception shows a branded recovery screen instead of a blank page.
+- **NIM-062** [DONE] Fixed a missing `.catch()` on `api.careDropTypes()` in `Home.tsx` (secondary unhandled-rejection risk); added visible error + retry state, matching the existing `myLoops()` pattern.
+- **NIM-063** [DONE] Added temporary, explicitly non-sensitive console-only stage markers (`app/src/diagnostics.ts`) through the connect → Home render path, to localize a future on-device failure if this fix doesn't fully resolve it. Intended to be removed once device verification confirms the fix.
+- **NIM-064** [TODO — blocking] Device retest not yet performed by a human inside Nimiq Pay. Code-level fix is `PASS`; device fix remains `UNVERIFIED` until confirmed. See `MEMORY.md` for the exact retest procedure.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.
