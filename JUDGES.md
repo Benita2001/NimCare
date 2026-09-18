@@ -10,7 +10,7 @@ A guide to what's real, where the evidence lives, and how NimCare maps to the cu
 - **Completeness**: onboarding, pairing, CareDrop creation/payment/verification, response/reveal, and Memory are all implemented, not stubbed.
 - **Real need / target audience**: partners, friends, and family living apart, who want a payment that carries intentional meaning instead of being a contextless transfer — see `PRD.md`.
 - **Originality**: CareDrop is explicitly not a tip, bounty, or pay-for-proof mechanic — the gift belongs to the recipient the moment it's verified, before any response is required. See "Usefulness & Originality" below.
-- **Repeat value**: the shared Memory timeline and the Loop pairing model are designed to be revisited, not opened once.
+- **Repeat value**: the Loop moments timeline and "Send one back" are designed to be revisited, not opened once.
 
 ## Nimiq Pay and Nimiq Integration — 25
 

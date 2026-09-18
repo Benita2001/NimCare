@@ -21,7 +21,7 @@ Implement the Critical Demo Path (wallet connect → pair → real NIM CareDrop 
 - **Frontend**: Vite + React + TypeScript (per official tutorial's supported options; React chosen for ecosystem familiarity and shadcn/ui compatibility for the design system).
 - **Nimiq integration**: `@nimiq/mini-app-sdk` (latest published version at install time — resolve exact version from npm at scaffold time, commit lockfile).
 - **Backend**: Node.js + TypeScript, a minimal HTTP API (Express) colocated in the same repo (`server/`). No separate microservices, no queues, no Redis.
-- **Persistence (Decision, dev)**: SQLite via `better-sqlite3`, file-based, schema written in portable SQL (see Data Model). **Known gap**: production deployment needs a real managed Postgres (or equivalent) instance — this requires credentials not present in this environment; documented as a human action in `PROJECT_PLAN.md`.
+- **Persistence**: real Postgres (Neon, provisioned via the Vercel Marketplace) — used in both dev and production. SQLite/`better-sqlite3` was the original dev-only choice and has been **fully migrated away from**, not deferred; there is no SQLite code path left in `server/`. `server/src/db/index.ts` requires `DATABASE_URL` and throws on startup if it's unset.
 - **Auth**: wallet-native — nonce-challenge + `sign()` verification (see Authentication below). No email/password.
 
 ## Architecture summary
@@ -38,7 +38,7 @@ NimCare API (Node/Express, same repo, server/)
   ├─ Pair routes: create invite, accept invite, get pair
   ├─ CareDrop routes: create, mark payment submitted, get, respond, complete
   ├─ Verification service: polls/looks up tx by hash via Nimiq RPC (NIMIQ_RPC_URL)
-  └─ SQLite persistence (dev) / Postgres (production, pending credentials)
+  └─ Postgres persistence (Neon, real in both dev and production)
 ```
 
 ## Client responsibilities
@@ -58,7 +58,7 @@ NimCare API (Node/Express, same repo, server/)
 
 ## Persistence
 
-SQLite (dev) file at `server/data/nimcare.db`, WAL mode, schema below. Integers used throughout for Luna amounts (no floats). Production: swap the `better-sqlite3` adapter for a Postgres client behind the same repository interface — deferred until credentials exist (Phase 7 blocker).
+Real Postgres (Neon) in both dev and production — see `server/src/db/index.ts` and `server/src/db/schema.sql`. Integers used throughout for Luna amounts (no floats). Local dev connects to the same Neon project via a `DATABASE_URL` pulled with `vercel env pull` (see README.md).
 
 ## Nimiq integration (Known / Decision / Unknown)
 
@@ -218,7 +218,7 @@ Every SDK/API call site maps to a specific UI state per PRD P0.12 list — imple
 
 `.env.example` (Phase 1) will define, with no real values committed:
 - `PORT`
-- `DATABASE_PATH` (SQLite dev) / `DATABASE_URL` (future Postgres)
+- `DATABASE_URL` (real Postgres connection string, required — server throws on startup without it)
 - `NIMIQ_RPC_URL` (optional; verification degrades gracefully if unset)
 - `SESSION_SECRET`
 - `NODE_ENV`
