@@ -1,4 +1,3 @@
-````markdown
 # NimCare 💌
 
 > **Send a moment, not just money.**
@@ -13,26 +12,26 @@ The recipient opens a private link, authenticates with their Nimiq wallet, revea
 
 ---
 
-## Live links
+## 🔗 Live Links
 
 | | |
 |---|---|
 | **Live Mini App** | https://nimcare-app.vercel.app |
-| **Demo video** | https://youtu.be/GR5fsD2Co-Q?si=sLL4w5Svs6A08fD6 |
-| **Submission PR** | https://github.com/nimiq/miniappscompetition-submissions/pull/265 |
+| **Demo Video** | https://youtu.be/GR5fsD2Co-Q?si=sLL4w5Svs6A08fD6 |
+| **Competition Submission** | https://github.com/nimiq/miniappscompetition-submissions/pull/265 |
 | **X / Twitter** | https://x.com/0x_beni_/status/2101091046381801901?s=20 |
-| **Skool post** | https://www.skool.com/miniappscompetition/i-built-nimcare-for-nimiq-mini-apps-competition?p=1c494c1c |
-| **API health** | https://nimcare-api.vercel.app/api/health |
+| **Skool Post** | https://www.skool.com/miniappscompetition/i-built-nimcare-for-nimiq-mini-apps-competition?p=1c494c1c |
+| **API Health** | https://nimcare-api.vercel.app/api/health |
 
 ---
 
-# The idea
+# The Idea
 
 Sending someone money is useful.
 
 But it rarely feels personal.
 
-A bank transfer says:
+A normal transaction says:
 
 > **0.5 NIM sent.**
 
@@ -58,12 +57,13 @@ The blockchain handles the value.
 
 # The Critical Demo Path
 
-The core product intentionally stays simple:
+The core product intentionally stays simple.
 
 ### Sender
 
 **Open NimCare**
-→ connect Nimiq Pay wallet  
+
+→ connect a Nimiq Pay wallet  
 → choose a CareDrop  
 → add media or a note  
 → enter the recipient wallet  
@@ -74,10 +74,11 @@ The core product intentionally stays simple:
 ### Recipient
 
 **Open the private link**
+
 → authenticate with Nimiq Pay  
 → see **“A CareDrop found you”**  
 → open the surprise  
-→ see the photo / playlist / movie moment + NIM gift  
+→ see the photo, playlist, movie moment or NIM gift  
 → respond  
 → optionally **Send one back**
 
@@ -88,10 +89,10 @@ Every successful exchange automatically becomes part of a shared private **Loop*
 There is no:
 
 - relationship request
-- “friend acceptance”
-- account registration
+- friend acceptance
+- account-registration ceremony
 - username/password flow
-- prerequisite pairing ceremony
+- prerequisite pairing process
 
 The relationship emerges from the exchange itself.
 
@@ -101,36 +102,38 @@ The relationship emerges from the exchange itself.
 
 Nimiq is not a bolt-on payment button in NimCare.
 
-It is the trust and identity layer that makes the product work.
+It is the **identity, payment and verification layer** that makes the product work.
 
 | Nimiq capability | How NimCare uses it |
 |---|---|
 | `listAccounts()` | Wallet-native identity |
-| `sign()` | Cryptographic login / wallet ownership proof |
-| `sendBasicTransactionWithData()` | Real NIM payment with a CareDrop-specific on-chain reference |
-| Nimiq JSON-RPC | Independent server-side verification |
+| `sign()` | Cryptographic login and wallet ownership proof |
+| `sendBasicTransactionWithData()` | Real NIM payment carrying a CareDrop-specific reference |
+| Nimiq JSON-RPC | Independent server-side transaction verification |
 | Nimiq Pay | Native transaction approval and Mini App experience |
 | NIM | The value attached to each CareDrop |
 
-The backend never accepts:
+The backend never simply accepts:
 
 > “The frontend says the payment worked.”
 
-Instead, it independently checks the blockchain before treating a CareDrop as delivered.
+Instead, NimCare independently checks the blockchain before treating a CareDrop as delivered.
+
+**Human on the surface. Verifiable underneath.**
 
 ---
 
-# Real transaction verification
+# Real Transaction Verification
 
 Every CareDrop receives a short reference such as:
 
 ```text
 NC:D:a1b2c3d4e5
-````
+```
 
 That reference is attached to the NIM transaction.
 
-After Nimiq Pay returns a transaction hash, NimCare's backend checks:
+After Nimiq Pay returns a transaction hash, NimCare's backend verifies:
 
 ```text
 transaction exists
@@ -156,13 +159,13 @@ This protects NimCare from fake transaction submissions and payment replay.
 
 ---
 
-# Wallet-native authentication
+# Wallet-Native Authentication
 
 NimCare does not use email/password authentication.
 
 A user signs a domain-bound nonce with their Nimiq wallet.
 
-The server then verifies the signature using `@nimiq/core`.
+The server verifies that signature using `@nimiq/core`.
 
 ```text
 Nimiq Pay wallet
@@ -185,15 +188,15 @@ NimCare session
 
 The user's:
 
-* private key
-* seed phrase
-* recovery words
+- private key
+- seed phrase
+- recovery words
 
 never leave Nimiq Pay and are never requested by NimCare.
 
 ---
 
-# Surprise-first architecture
+# Surprise-First Architecture
 
 An earlier version of NimCare required two users to pair before sending anything.
 
@@ -201,19 +204,19 @@ That created exactly the wrong feeling for this product.
 
 A surprise should not begin with:
 
-> “Please accept my relationship invite.”
+> **“Please accept my relationship invite.”**
 
 So NimCare was redesigned around a **surprise-first flow**.
 
 The sender can enter any valid Nimiq recipient address — even if the recipient has never opened NimCare before.
 
-Internally, NimCare can safely recognize that wallet address without treating it as authenticated.
+Internally, NimCare can recognize that wallet address without treating it as authenticated.
 
-Only a real wallet signature can create an authenticated session.
+Only a real cryptographic wallet signature can create an authenticated session.
 
-That distinction lets the product support:
+That distinction lets NimCare support:
 
-**send first → recipient discovers NimCare later**
+> **send first → recipient discovers NimCare later**
 
 without weakening authentication.
 
@@ -221,9 +224,9 @@ without weakening authentication.
 
 # CareDrops
 
-## 📷 I was thinking of you
+## 📷 I Was Thinking of You
 
-Send a photo, a personal note, and some NIM.
+Send a photo, a personal note and some NIM.
 
 Example:
 
@@ -231,25 +234,33 @@ Example:
 
 ---
 
-## 🎵 This made me think of you
+## 🎵 This Made Me Think of You
 
-Share a Spotify, Apple Music, or YouTube link with a message and NIM attached.
+Share a Spotify, Apple Music or YouTube link with a message and NIM attached.
 
 The music itself is not downloaded or re-hosted by NimCare.
 
 ---
 
-## 🎬 Movie on me
+## 🎬 Movie on Me
 
-Send a small NIM gift intended for movie night alongside a title, link, or personal message.
+Send a small NIM gift intended for movie night alongside a title, link or personal message.
 
 NimCare does not pretend to purchase cinema tickets or fabricate integrations that do not exist.
 
 ---
 
+## 🎁 Small Treat
+
+Sometimes the moment does not need to be complicated.
+
+Send a small NIM gift with a simple personal message.
+
+---
+
 # Loops
 
-A **Loop** is the private history between two wallets.
+A **Loop** is the private shared history between two wallets.
 
 The first successful CareDrop automatically creates the Loop.
 
@@ -264,13 +275,13 @@ You
  │
  ├── Movie-night CareDrop
  │
- └── ...
+ └── Small Treat
  │
  ▼
 Shared Loop
 ```
 
-This turns NimCare from a one-off payment interaction into something users can return to.
+This turns NimCare from a one-off payment interaction into something people can return to.
 
 ---
 
@@ -298,12 +309,14 @@ flowchart LR
 app/
 ```
 
-* React
-* TypeScript
-* Vite
-* `@nimiq/mini-app-sdk`
-* mobile-first consumer UI
-* hosted on Vercel
+Built with:
+
+- React
+- TypeScript
+- Vite
+- `@nimiq/mini-app-sdk`
+- mobile-first consumer UI
+- Vercel deployment
 
 ### Backend
 
@@ -311,17 +324,19 @@ app/
 server/
 ```
 
-* Express
-* TypeScript
-* Neon Postgres
-* Vercel Functions
-* Vercel Blob
-* `@nimiq/core`
-* Nimiq JSON-RPC verification
+Built with:
+
+- Express
+- TypeScript
+- Neon Postgres
+- Vercel Functions
+- Vercel Blob
+- `@nimiq/core`
+- Nimiq JSON-RPC verification
 
 ---
 
-# CareDrop lifecycle
+# CareDrop Lifecycle
 
 ```text
 DRAFT
@@ -343,21 +358,21 @@ If blockchain verification is unavailable, NimCare leaves the CareDrop pending r
 
 ---
 
-# Privacy and security
+# Privacy & Security
 
-NimCare is designed around private interactions between known people.
+NimCare is designed around private interactions between people who already know each other.
 
 ### NimCare never requests
 
-* seed phrases
-* private keys
-* recovery words
+- seed phrases
+- private keys
+- recovery words
 
-### Sensitive content is not written on-chain
+### Sensitive content stays off-chain
 
 The blockchain receives only a minimal CareDrop reference.
 
-Photos, captions, responses, and other private content remain off-chain.
+Photos, captions, responses and private content remain off-chain.
 
 ### Access control
 
@@ -365,29 +380,35 @@ A shared CareDrop link alone is not enough to read private content.
 
 The viewer must authenticate as either:
 
-* the sender, or
-* the intended recipient wallet
+- the sender, or
+- the intended recipient wallet
 
 A different authenticated wallet receives an authorization failure.
 
 ### Additional protections
 
-* cryptographic wallet authentication
-* expiring nonces
-* nonce replay prevention
-* hashed session tokens
-* transaction hash uniqueness
-* sender/recipient/amount/reference verification
-* file type validation
-* CareDrop state-machine enforcement
-* server-side authorization
-* CORS restrictions
+NimCare includes:
+
+- cryptographic wallet authentication
+- expiring nonces
+- nonce replay prevention
+- hashed session tokens
+- transaction-hash uniqueness
+- sender verification
+- recipient verification
+- amount verification
+- CareDrop-reference verification
+- canonical Nimiq address validation
+- file-type validation
+- CareDrop state-machine enforcement
+- server-side authorization
+- CORS restrictions
 
 See [`PRIVACY.md`](./PRIVACY.md) for the full disclosure.
 
 ---
 
-# Reliability and testing
+# Reliability & Testing
 
 NimCare was tested beyond the happy path.
 
@@ -399,45 +420,68 @@ Current backend suite:
 
 Coverage includes:
 
-* real Nimiq signature verification
-* invalid signatures
-* expired/replayed nonces
-* canonical Nimiq address validation
-* self-send rejection
-* first-time recipients
-* recipient authorization
-* malicious / invalid requests
-* CareDrop creation
-* Loop creation and reuse
-* NIM/Luna conversions
-* transaction reference verification
-* incorrect sender
-* incorrect recipient
-* incorrect amount
-* incorrect reference
-* transaction hash replay
-* RPC unavailable behavior
-
-Real-device debugging also verified inside Nimiq Pay that:
-
-* wallet connection works
-* wallet authentication works
-* Nimiq consensus is established
-* `sendBasicTransaction()` returns a real transaction hash
-* `sendBasicTransactionWithData()` returns a real transaction hash
-* the exact NimCare `NC:D:<reference>` transaction format works
-
-During real-device testing, a production-only first-time-recipient bug was also discovered and fixed:
-
-the original database schema expected a recipient wallet to already exist in NimCare before a Loop could be created.
-
-That contradicted NimCare's surprise-first model.
-
-The fix now safely creates a non-authenticated wallet record for previously unseen addresses while preserving the requirement for a real cryptographic signature before that wallet can access anything.
+- real Nimiq signature verification
+- invalid signatures
+- expired nonces
+- replayed nonces
+- canonical Nimiq address validation
+- invalid address checksum rejection
+- self-send rejection
+- first-time recipients
+- recipient authorization
+- malformed requests
+- CareDrop creation
+- Loop creation
+- Loop reuse
+- NIM/Luna conversion
+- transaction-reference verification
+- incorrect sender
+- incorrect recipient
+- incorrect amount
+- incorrect reference
+- transaction-hash replay
+- RPC unavailable behavior
 
 ---
 
-# Current production network
+# Real-Device Nimiq Pay Testing
+
+Real-device testing inside Nimiq Pay verified that:
+
+- wallet connection works
+- wallet authentication works
+- Nimiq consensus is established
+- `sendBasicTransaction()` returns a real transaction hash
+- `sendBasicTransactionWithData()` returns a real transaction hash
+- NimCare's exact `NC:D:<reference>` transaction format works
+
+Real-device testing also helped uncover an important production-only bug.
+
+The original database structure expected the recipient wallet to already exist inside NimCare before a Loop could be created.
+
+That contradicted NimCare's surprise-first design because someone should be able to receive a surprise even if they have never used NimCare before.
+
+The production error was traced to a PostgreSQL foreign-key violation:
+
+```text
+SQLSTATE 23503
+pair_member_b_wallet_fkey
+```
+
+The fix safely creates a non-authenticated wallet record for previously unseen recipient addresses.
+
+That placeholder:
+
+- does not grant a session
+- does not prove wallet ownership
+- contains no authenticated public key
+- cannot access private CareDrops
+
+Only real cryptographic wallet authentication grants access.
+
+---
+
+# Current Production Network
 
 The production backend currently expects:
 
@@ -446,27 +490,27 @@ Nimiq Mainnet
 networkId: 24
 ```
 
-The configured RPC is used to independently verify submitted transactions.
+The configured Nimiq RPC is used to independently verify submitted transactions.
 
 ---
 
-# What NimCare deliberately does NOT do
+# What NimCare Deliberately Does NOT Do
 
-Hackathon products become fragile very quickly when everything gets added.
+Hackathon projects become fragile very quickly when everything gets added.
 
 NimCare intentionally does **not** include:
 
-* NFTs
-* custom smart contracts
-* escrow
-* staking
-* AI relationship coaching
-* dating/discovery
-* public social feeds
-* group gifting
-* video calling
-* fake ticket purchasing
-* fake Cashlink functionality
+- NFTs
+- custom smart contracts
+- escrow
+- staking
+- AI relationship coaching
+- dating/discovery
+- public social feeds
+- group gifting
+- video calling
+- fake ticket purchasing
+- fake Cashlink functionality
 
 The goal was to build one coherent experience well:
 
@@ -474,16 +518,16 @@ The goal was to build one coherent experience well:
 
 ---
 
-# Running locally
+# Running Locally
 
 ## Requirements
 
-* Node.js 22+
-* npm
-* Postgres database
-* Nimiq RPC endpoint
+- Node.js 22+
+- npm
+- PostgreSQL database
+- Nimiq RPC endpoint
 
-Clone:
+Clone the repository:
 
 ```bash
 git clone https://github.com/Benita2001/NimCare.git
@@ -524,7 +568,7 @@ http://localhost:8787
 
 ---
 
-# Environment variables
+# Environment Variables
 
 See:
 
@@ -548,37 +592,59 @@ BLOB_READ_WRITE_TOKEN
 
 ---
 
-# Repository map
+# Repository Map
 
 ```text
 NimCare/
-├── app/                  # Nimiq Pay Mini App
+├── app/                       # Nimiq Pay Mini App
 │   └── src/
-│       ├── screens/      # Main product flows
-│       ├── nimiq/        # Mini App provider integration
-│       └── components/   # UI and illustrations
+│       ├── screens/           # Main product flows
+│       ├── nimiq/             # Mini App provider integration
+│       └── components/        # UI and illustrations
 │
 ├── server/
 │   └── src/
-│       ├── routes/       # API routes
-│       ├── services/     # Auth, blockchain verification, wallet logic
-│       └── db/           # Postgres schema / persistence
+│       ├── routes/            # API routes
+│       ├── services/          # Auth, blockchain verification, wallet logic
+│       └── db/                # PostgreSQL schema / persistence
 │
-├── PRD.md                # Product requirements
-├── TRD.md                # Technical design
-├── PROJECT_PLAN.md       # Build plan / scope decisions
-├── JUDGES.md             # Judge-oriented evidence map
-├── PRIVACY.md            # Privacy disclosure
-├── MEMORY.md             # Engineering decisions / evidence trail
-├── TASKS.md              # Execution history
-└── LICENSE               # MIT
+├── PRD.md                     # Product requirements
+├── TRD.md                     # Technical design
+├── PROJECT_PLAN.md            # Build plan and scope decisions
+├── JUDGES.md                  # Judge-oriented evidence map
+├── PRIVACY.md                 # Privacy disclosure
+├── MEMORY.md                  # Engineering decisions / evidence trail
+├── TASKS.md                   # Execution history
+└── LICENSE                    # MIT
 ```
 
 ---
 
-# For judges
+# Key Source Files
 
-If you only have a few minutes:
+If you want to inspect the core Nimiq integration directly:
+
+```text
+app/src/nimiq/provider.ts
+server/src/services/nimiqSignedMessage.ts
+server/src/services/verifyTransaction.ts
+server/src/services/wallet.ts
+server/src/routes/caredrops.ts
+```
+
+These cover:
+
+- wallet/provider interaction
+- wallet-signature verification
+- blockchain transaction verification
+- first-time recipient support
+- CareDrop creation and authorization
+
+---
+
+# For Judges
+
+If you only have a few minutes, use this path.
 
 ### 1. Understand the product
 
@@ -586,13 +652,13 @@ If you only have a few minutes:
 
 ### 2. Watch the demo
 
-[https://youtu.be/GR5fsD2Co-Q?si=sLL4w5Svs6A08fD6](https://youtu.be/GR5fsD2Co-Q?si=sLL4w5Svs6A08fD6)
+https://youtu.be/GR5fsD2Co-Q?si=sLL4w5Svs6A08fD6
 
 ### 3. Open the live Mini App
 
-[https://nimcare-app.vercel.app](https://nimcare-app.vercel.app)
+https://nimcare-app.vercel.app
 
-### 4. Look at the Nimiq integration
+### 4. Inspect the Nimiq integration
 
 Key files:
 
@@ -603,7 +669,7 @@ server/src/services/verifyTransaction.ts
 server/src/routes/caredrops.ts
 ```
 
-### 5. Inspect the evidence
+### 5. Run the evidence
 
 ```bash
 cd server
@@ -618,7 +684,7 @@ Current result:
 
 ---
 
-# Builder story
+# Builder Story
 
 I built NimCare around a simple idea:
 
@@ -626,43 +692,64 @@ I built NimCare around a simple idea:
 
 I wanted a payment to feel more like a gesture between people than a transaction receipt.
 
-So NimCare turns NIM into a CareDrop — something that can carry a photo, a playlist, a movie-night moment, a note, and a small gift at the same time.
+So NimCare turns NIM into a **CareDrop** — something that can carry a photo, playlist, movie-night moment, note and small gift at the same time.
 
 The most important product decision was making the technology disappear.
 
 The user should think:
 
-> “I sent someone a moment.”
+> **“I sent someone a moment.”**
 
 not:
 
 > “I executed a blockchain transaction.”
 
-Nimiq remains essential underneath: it provides the wallet identity, the payment rail, native approval, and verifiable proof that the gift was actually sent.
+Nimiq remains essential underneath.
+
+It provides:
+
+- wallet identity
+- the payment rail
+- native transaction approval
+- verifiable proof that the gift was actually sent
 
 That is the balance NimCare is trying to create:
 
-**human on the surface, verifiable underneath.**
+> **Human on the surface. Verifiable underneath.**
 
 ---
 
-# Submission
+# Competition Submission
 
 NimCare was submitted to the **Nimiq Mini Apps Competition — Cycle II**.
 
-Submission PR:
+### Submission PR
 
-[https://github.com/nimiq/miniappscompetition-submissions/pull/265](https://github.com/nimiq/miniappscompetition-submissions/pull/265)
+https://github.com/nimiq/miniappscompetition-submissions/pull/265
+
+### Demo Video
+
+https://youtu.be/GR5fsD2Co-Q?si=sLL4w5Svs6A08fD6
+
+### Builder Promotion
+
+**X / Twitter**
+
+https://x.com/0x_beni_/status/2101091046381801901?s=20
+
+**Skool**
+
+https://www.skool.com/miniappscompetition/i-built-nimcare-for-nimiq-mini-apps-competition?p=1c494c1c
 
 The competition's automated submission checks confirmed:
 
-* valid submission structure
-* valid manifest
-* valid images
-* public repository
-* MIT license
-* reachable live demo
-* public demo video
+- valid submission structure
+- valid manifest
+- valid images
+- public repository
+- MIT license
+- reachable live demo
+- public demo video
 
 ---
 
@@ -674,6 +761,5 @@ MIT — see [`LICENSE`](./LICENSE).
 
 <p align="center">
   <strong>NimCare</strong><br/>
-  Send a moment, not just money.
+  <em>Send a moment, not just money.</em>
 </p>
-```
