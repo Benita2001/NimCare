@@ -1,21 +1,24 @@
 # NimCare
 
-**Send more than money.**
-Turn a small NIM gift into a moment that matters.
+**Send a moment, not just money.**
+Turn a little NIM into something they'll remember.
 
-NimCare is a [Nimiq Pay](https://nimiq.dev/mini-apps/) Mini App built for the [Nimiq Mini Apps Competition, Cycle II](https://miniappscompetition.com/). It turns a small NIM payment into a shared, meaningful moment between two people who already know each other — a partner, a friend, a family member.
+NimCare is a [Nimiq Pay](https://nimiq.dev/mini-apps/) Mini App built for the [Nimiq Mini Apps Competition, Cycle II](https://miniappscompetition.com/). It turns NIM into meaningful digital surprises — a **CareDrop** is a photo, a song, a movie-night gift, or a small treat, with a little NIM attached, sent directly to someone.
 
 ## The problem
 
-Payment apps move money without meaning. Messaging apps carry meaning without money. NimCare connects the two: a payment becomes a small, intentional gesture with a prompt and a private note attached.
+Payment apps move money without meaning. Messaging apps carry meaning without money. NimCare connects the two — and unlike most "send NIM" products, the recipient never has to accept a relationship or complete any setup before receiving their surprise.
 
 ## How it works
 
 1. **Connect** — open NimCare inside Nimiq Pay and connect your wallet. No email, no password.
-2. **Create your Loop** — invite someone (Partner / Friend / Family) with a shareable link.
-3. **Send a CareDrop** — pick a prompt ("Coffee on me ☕"), an amount, and write a private note. NimCare requests a real NIM transaction through Nimiq Pay's native approval UI.
-4. **Verified, not assumed** — NimCare's backend independently checks the transaction against real Nimiq blockchain data before marking it delivered. It never trusts the client's word alone.
-5. **Respond & reveal** — your recipient sees the gift (already theirs) and a locked note. They respond, the note unlocks, and the moment joins your shared **Memory** timeline.
+2. **Pick a moment** — Photo ("I was thinking of you"), Playlist ("This made me think of you"), Movie Night, or a small Treat.
+3. **Send it** — add the content, pick who it's for (an existing Loop, or any wallet address), pick an amount, and approve the real NIM transaction through Nimiq Pay's native approval UI.
+4. **Verified, not assumed** — NimCare's backend independently checks the transaction against real Nimiq blockchain data, and that it's bound to this exact CareDrop, before marking it delivered.
+5. **The surprise** — your recipient opens your link, authenticates their wallet, and the moment reveals immediately — the gift is already theirs. They can respond, and send one back.
+6. **The Loop** — every CareDrop two wallets exchange automatically becomes part of their shared history. No separate "accept" step ever happens.
+
+*(2026-09-18: pivoted from an earlier pair-first, text-prompt-only model — see `MEMORY.md` for the full rationale and a git tag, `pre-media-caredrop-pivot`, if you want to see what came before.)*
 
 ## Why Nimiq
 

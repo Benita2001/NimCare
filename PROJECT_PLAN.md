@@ -13,27 +13,28 @@
 
 ### One sentence
 
-NimCare is a Nimiq Pay Mini App that turns small NIM payments into meaningful shared experiences between people through CareDrops, private prompts, wallet-verified interactions and shared memories.
+NimCare is a Nimiq Pay Mini App that turns small NIM payments into meaningful digital surprises — CareDrops (photo/playlist/movie/treat) sent directly to a wallet, revealed the moment they're opened, with the private Loop between two people forming automatically. *(Updated 2026-09-18 — see MEMORY.md for the pivot from the original pair-first/text-prompt model.)*
 
 ### Build objective
 
-Ship a working, judge-testable vertical slice of the Critical Demo Path: wallet connect → pair → send a real NIM CareDrop → server-verify the transaction → recipient responds/completes → sealed note reveals → shows in shared Memory.
+Ship a working, judge-testable vertical slice of the Critical Demo Path: wallet connect → compose a media CareDrop → send it directly to a wallet (no pairing gate) → real NIM transaction → server-verify → recipient opens via share link → media reveals → responds → automatic Loop.
 
 ### Winning objective
 
 A small, reliable, well-designed Mini App beats a large unfinished one (scoring: 45 functionality/reliability, 25 Nimiq integration, 15 real usage, 10 design/UX, 5 builder promotion). Protect the Critical Demo Path above feature count.
 
-## 3. Critical Demo Path
+## 3. Critical Demo Path (2026-09-18 pivot)
 
-1. Wallet A opens NimCare inside Nimiq Pay, connects via `@nimiq/mini-app-sdk`.
-2. Wallet A creates a Loop (pair invite), Wallet B accepts with their own wallet.
-3. Wallet A sends a CareDrop (template + amount + private note) — real NIM transaction via Nimiq Pay's native approval UI.
-4. Backend verifies the transaction against real Nimiq blockchain data (not client-trusted).
-5. Wallet B sees the CareDrop, responds, completes it (wallet signature if validated).
-6. Sealed note reveals; both see it in shared Memory.
+1. Wallet A opens NimCare inside Nimiq Pay, connects via `@nimiq/mini-app-sdk` (real cryptographic login).
+2. A taps "I was thinking of you," uploads a photo, picks Wallet B (existing Loop or a new address), picks an amount.
+3. A approves a real NIM transaction via Nimiq Pay's native approval UI — no prior pairing/accept step ever happened.
+4. Backend verifies the transaction against real Nimiq blockchain data (not client-trusted) and checks it's bound to this exact CareDrop.
+5. A shares the CareDrop link. B opens it, authenticates, taps "Open surprise."
+6. The photo reveals immediately — the gift is already B's. B responds; B can tap "Send one back."
+7. The Loop between A and B now exists automatically, containing this moment.
 
-**Memorable moment:** A real Nimiq payment becomes a meaningful shared relationship experience — judges see money move on-chain and an emotional interaction unlock as a direct result.
-**Sponsor proof:** Real `@nimiq/mini-app-sdk` account access, real signed NIM transaction, server-side verification against live Nimiq transaction data.
+**Memorable moment:** A real Nimiq payment becomes a surprise someone opens and reacts to in real time — no relationship setup in the way of that reaction.
+**Sponsor proof:** Real `@nimiq/mini-app-sdk` account access, real signed NIM transaction, server-side verification against live Nimiq transaction data (proven live against `rpc.nimiqwatch.com` during hardening — see `MEMORY.md`).
 
 ## 4. Build Strategy
 
@@ -210,15 +211,17 @@ Never include secrets or private keys in this file.
 
 ## 14. Current State
 
-**Current phase:** Phase 7 (Demo/Submission hardening) — security hardening complete, real production deployment live.
-**Current milestone:** Full Critical Demo Path implemented and proven end-to-end against the **live production deployment** (real cryptographic wallet auth, real Postgres, real Nimiq RPC verification) — see `MEMORY.md` for exact commands and results. 20 automated tests passing against the real production-grade database. Deployment: https://nimcare-app.vercel.app (frontend), https://nimcare-api.vercel.app (API + Neon Postgres via Vercel Marketplace).
-**Primary blocker:** No confirmed physical Nimiq Pay device in this environment — blocks NIM-026 on-device UI proof only. Deployment (formerly NIM-029) is no longer blocked: a real Vercel + Neon Postgres deployment exists and was proven live.
-**Next phase condition:** A human runs NIM-026 (real two-phone device test per `DEVICE_TESTING.md`); then final rule/scoring audit (NIM-030, noting the live scoring page currently shows 45/25/15/10/5/100 — re-verified 2026-09-18) and submission.
+**Current phase:** Phase 9 (Product Pivot) complete for everything buildable without a physical device; Phase 7 hardening from the prior pass carries forward.
+**Current milestone:** Surprise-first media CareDrop pivot shipped and live in production. Full pivoted flow (real photo upload → direct-to-wallet CareDrop, no pairing gate → real NIM tx → server verification → share-link open gated to the correct recipient → automatic Loop) proven end-to-end against the live deployment — see `MEMORY.md`. 23 automated tests passing against the real production Postgres database.
+**Primary blocker:** No confirmed physical Nimiq Pay device in this environment — blocks on-device UI proof (NIM-026, now also NIM-051 for the pivoted flow specifically).
+**Next phase condition:** A human runs the two-phone device test against the *pivoted* flow (`DEVICE_TESTING.md` needs a rewrite pass to match — flagged as NIM-051); then final rule/scoring audit and submission.
 
 ## 15. Major Blockers
 
-* No confirmed access to a physical Nimiq Pay app in this coding environment — the full on-device UI walkthrough (`DEVICE_TESTING.md`) requires a human with a phone. All server-side logic this would exercise (auth, verification, state transitions, authorization) is proven by 20 automated tests against the real production database instead.
+* No confirmed access to a physical Nimiq Pay app in this coding environment — the full on-device UI walkthrough requires a human with a phone. All server-side logic this would exercise (auth, verification, state transitions, authorization, share-link access control) is proven by 23 automated tests against the real production database instead, plus live production smoke tests (real photo upload, real crypto login, real Loop auto-creation).
 * Whether the production RPC (`https://rpc.nimiqwatch.com`) serves testnet data, not just the mainnet data confirmed during hardening, is unverified — see `DEVICE_TESTING.md` prerequisites before funding a demo wallet on a specific network.
+* `DEVICE_TESTING.md` still describes the pre-pivot invite/accept flow and has not yet been rewritten for the surprise-first flow (NIM-051) — noted rather than left silently stale.
+* Playlist and Movie Night CareDrop types are implemented but not live-smoke-tested to the same depth as Photo/Treat (NIM-050).
 
 ## 16. Deferred Until Core Is Stable
 

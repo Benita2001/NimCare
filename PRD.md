@@ -1,11 +1,18 @@
 # PRD — NimCare
 
+> **2026-09-18 pivot notice**: this document was rewritten for the surprise-first media CareDrop pivot. The prior text-prompt-only model, and the mandatory "create Loop → invite → accept" flow before a CareDrop could be sent, are superseded. See `MEMORY.md` for the full pivot rationale and the Cashlink spike's evidence-based FAIL verdict. Checkpoint before the pivot: git tag `pre-media-caredrop-pivot`.
+
 ## Definition
 
-NimCare is a Nimiq Pay Mini App that turns small NIM payments into meaningful shared experiences between two people who already know each other, using CareDrops (gift + prompt + sealed note), a paired Loop, and a shared Memory timeline.
+NimCare is a Nimiq Pay Mini App that turns small NIM payments into meaningful digital surprises. A **CareDrop** is a media-rich moment (a photo, a song/playlist link, a movie-night gift, or a small treat) with a little NIM attached, sent directly to a specific wallet. The recipient doesn't have to accept a relationship or complete any setup before receiving it — they open a link, authenticate their wallet, and the surprise reveals immediately. The private history of CareDrops two wallets exchange forms a **Loop** automatically, with no separate pairing step.
 
-Tagline: **Send more than money.**
-Supporting line: **Turn a small NIM gift into a moment that matters.**
+Tagline: **Send a moment, not just money.**
+Supporting line: **Turn a little NIM into something they'll remember.**
+Alternative line: **Make their day.**
+
+## Core principle: surprise first, Loop second
+
+The old model required the recipient to "accept a relationship" before any CareDrop could exist. That barrier is gone. **CareDrop gets their attention. The moment creates the emotion. The Loop keeps the connection going.**
 
 ## Origin and differentiation
 
@@ -35,7 +42,7 @@ Wallet-native payment infrastructure (identity, signing, native approval, on-cha
 
 ## Value proposition
 
-Send more than money: a NIM gift becomes a shared moment through a prompt, a sealed note, a response, and a permanent place in a private timeline with one other person.
+Send a moment, not just money: a photo, a song, a movie-night gift, or a small treat — with a little NIM attached — sent directly to someone, revealed the moment they open it, no relationship setup required first.
 
 ## Why Nimiq
 
@@ -43,73 +50,78 @@ Nimiq Pay provides: wallet-native identity (no email/password), native transacti
 
 ## Core product model
 
-- **CareDrop** — the entry mechanic: NIM + prompt + sealed note + response + completion state.
-- **Loop** — the paired relationship between two wallets (member A, member B, relationship type, shared history).
-- **Memory** — the growing shared timeline of completed CareDrops.
+- **CareDrop** — one meaningful surprise: a type (Photo/Playlist/Movie/Treat), its media/content, an optional caption, and NIM attached — sent directly to a recipient wallet.
+- **Moment** — what the CareDrop contains (the photo, the song link, the movie card, the treat).
+- **Loop** — the private chain of moments between two wallets, created automatically the first time they exchange a CareDrop. No relationship-type question, no accept step.
 
-Transaction metadata carries only a minimal reference (e.g. conceptually `NC:D:<id>`, exact encoding pending Spike S3). Private messages are **never** placed on-chain.
+Transaction metadata carries only a minimal reference (`NC:D:<id>`). Private content (captions, photos, responses) is **never** placed on-chain.
 
 ## User flows
 
 ### Primary: Critical Demo Path
 
-1. Wallet A opens NimCare in Nimiq Pay → SDK inits → A grants account access.
-2. A creates or joins a Loop with Wallet B.
-3. A selects "Send a CareDrop": template, amount, private note; reviews recipient.
-4. NimCare requests a real NIM transaction via Nimiq Pay's native approval UI.
-5. A approves; NimCare receives a transaction hash.
-6. Backend verifies the transaction from real Nimiq blockchain data (not client-trusted).
-7. CareDrop → funded/delivered.
-8. Wallet B opens NimCare, sees the CareDrop (gift already belongs to them), prompt, and a locked note.
-9. B writes a response and completes the interaction (wallet signature where verified as supported).
-10. Backend verifies completion; sealed note unlocks for B.
-11. Both see the completed CareDrop in their shared Memory.
+**Sender**
+1. Opens NimCare in Nimiq Pay → wallet-native login (real signature verification).
+2. Taps a CareDrop type (e.g. "I was thinking of you").
+3. Adds the content (photo upload / music link / movie card / caption).
+4. Picks a recipient — an existing Loop, or a new wallet address.
+5. Picks an amount.
+6. Approves the real NIM transaction through Nimiq Pay's native approval UI.
+7. Gets a shareable surprise link.
+
+**Recipient**
+8. Opens the link (ideally via a Nimiq Pay deeplink; a plain browser gets a conversion screen).
+9. Authenticates their wallet.
+10. Sees "A CareDrop found you" → taps "Open surprise."
+11. The media reveals — the gift is already theirs; the backend has independently verified the transaction against real Nimiq blockchain data before this reveal shows a delivered state.
+12. Responds (optional).
+13. Both see the moment in their shared Loop, formed automatically — no separate accept step ever happened.
 
 ### Secondary flows
 
-- Pair invite creation/acceptance (P0.4).
+- "Send one back" — reciprocity shortcut from a completed CareDrop, prefilling the original sender as recipient.
 - Settings/privacy screen (minimal).
-- P1: Mutual Loop (both submit hidden answers to a shared prompt, unlock simultaneously).
+- P1: Mutual Loop (both submit hidden answers to a shared prompt, unlock simultaneously); legacy invite/accept endpoints remain in the API for backward compatibility but are not part of the primary UX.
 
 ## Scope
 
 ### P0 (must ship)
 
-1. Nimiq Pay Mini App integration (`init`, `listAccounts`, `sign`, `sendBasicTransactionWithData`) with full error handling (provider unavailable, init delay, user rejection, permission denied, malformed tx, wallet unavailable, network/consensus issues, verification delay/failure).
-2. Wallet-native onboarding, no signup form, shortened address display, never touching private keys.
-3. Secure wallet session: nonce challenge → signature → server verification → session (semantics pending Spike S5).
-4. Pairing/invite: unpredictable, one-time-where-practical, expiring invite tokens; no usernames required.
-5. CareDrop creation: recipient (paired wallet), prompt/template, amount, private note; curated templates ("Coffee on me", "Thinking of you", "Little treat", "Your choice" free text).
-6. Real NIM transaction via `sendBasicTransactionWithData()` (or fallback), integer-Luna internal accounting, minimal on-chain reference only.
-7. Server-side transaction verification (sender, recipient, amount, reference if available, confirmation state) before marking funded — never trust client-reported success.
-8. Recipient CareDrop experience: gift already delivered, prompt visible, note shown as LOCKED, response input.
-9. Response + completion: text response (P0), optional wallet-signed completion message, server verifies.
-10. Sealed-note reveal after verified completion; never exposed via unauthenticated endpoints.
-11. Memory timeline: date, type, sender→recipient, amount, completion status; private content restricted to paired wallets.
-12. Polished error/empty/retry states for every P0.12-listed failure mode — never a blank screen.
+1. Nimiq Pay Mini App integration (`init`, `listAccounts`, `sign`, `sendBasicTransactionWithData`) with full error handling.
+2. Wallet-native onboarding with real cryptographic session verification (no signup form, never touching private keys).
+3. Direct CareDrop creation to any recipient wallet — no prior pairing/accept step. Loop auto-created on first exchange.
+4. Three-plus polished CareDrop types: Photo (uploaded image), Playlist (Spotify/Apple Music/YouTube link), Movie Night (title/link/caption), Treat (caption-only, reuses the generic card).
+5. Real photo storage (Vercel Blob), JPEG/PNG/WebP only, size-capped, no arbitrary HTML/SVG upload.
+6. Real NIM transaction via `sendBasicTransactionWithData()`, integer-Luna accounting, minimal on-chain reference.
+7. Server-side transaction verification (sender, recipient, amount, on-chain reference match, confirmation state) before marking delivered — never trust client-reported success.
+8. Private, share-token-gated CareDrop links — content only served to the wallet-authenticated, pre-specified recipient.
+9. Recipient reveal experience: media-first, gift already theirs, optional response.
+10. Loop moments timeline: type, sender/recipient, amount, status; private content restricted to the two wallets involved.
+11. "Send one back" reciprocity shortcut.
+12. Polished error/empty/retry states for every documented failure mode — never a blank screen.
 
 ### P1 (after Critical Demo Path is demo-safe)
 
-Mutual Loop, shareable (privacy-safe) completion cards, display names, relationship streaks (no punishment mechanics), relationship-type-driven prompt curation.
+Reactions, richer playlist metadata (title/artwork via an officially permitted embed), opened/seen receipts, display names, scheduled "Open when…" CareDrops, better share cards, Mutual Loop, relationship streaks (no punishment mechanics).
 
 ### P2 (do not touch until everything else is finished)
 
-AI coach/prompt generation, voice/video/large images, push notifications, groups/family circles, NFTs, smart contracts, escrow, staking, token incentives, USDT, EVM chains, scheduled capsules, public feed, dating, advanced analytics, gamified tokens, marketplace, recommendation engine, moderation systems.
+Actual cinema ticket purchasing/provider integrations, voice/video, AI suggestions, groups, NFT memories, social feed, public discovery, advanced analytics, gamified tokens, marketplace, recommendation engine, smart contracts, escrow, staking, token incentives, USDT, EVM chains.
 
 ### Non-goals
 
-No custom smart contract, no NFT, no token launch, no escrow, no gambling/chance mechanics, no pay-for-proof challenge system, no social feed, no dating discovery, no buzzword AI, no multi-chain, no USDT (unless NIM is fully stable and there's a strong reason), no separate native mobile app.
+No custom smart contract, no NFT, no token launch, no escrow, no gambling/chance mechanics, no pay-for-proof/challenge-completion gating on the gift itself, no social feed, no dating discovery, no buzzword AI, no multi-chain, no USDT, no separate native mobile app, no hosting/downloading/proxying of copyrighted music or movie content, no fabricated ticket bookings.
 
 ## Acceptance criteria (P0)
 
-- **Wallet connect:** Opening NimCare inside Nimiq Pay triggers SDK `init()`; on success `listAccounts()` returns a real address rendered in shortened form; on rejection/unavailable-provider a specific, non-blank error state is shown with a retry action.
-- **Pairing:** Wallet A can create an invite; Wallet B can open it, connect their wallet, and accept; the pair record persists with both addresses, relationship type, and status ACCEPTED; an expired or already-consumed invite shows a clear, specific error (not a generic failure).
-- **CareDrop send:** Given a paired recipient, a chosen template or custom prompt, an amount, and a note, submitting triggers a real Nimiq Pay approval request; a user-cancelled approval leaves the CareDrop in a clearly labeled non-funded state with a retry path, never silently "sent."
-- **Verification:** A CareDrop is marked funded/delivered only after the backend independently retrieves and checks the transaction (sender, recipient, amount, state) from Nimiq blockchain data; a mismatch or verification failure keeps the CareDrop in a FAILED/PENDING state with an explanit UI, never silently marked funded.
-- **Recipient experience:** The recipient sees the gift as already theirs, the prompt, and a note marked LOCKED, with a response field; unauthenticated requests cannot fetch the sealed note or the response.
-- **Completion + reveal:** Submitting a response (and signature, once S5 confirms feasibility) transitions the CareDrop to COMPLETED only after backend verification; only then does the sealed note become visible to the recipient, and the memory entry appears for both wallets.
-- **Memory:** Both paired wallets can see a chronological list of their completed CareDrops (date, type, direction, amount, status); a third party cannot query this data.
-- **Resilience:** Every P0.12 failure scenario (cancel connect, cancel payment, insufficient balance, malformed address, lost network, provider unavailable, pending tx, delayed verification, invalid/expired invite, unauthorized pair access, backend error, empty state) renders a specific, non-blank, on-brand UI state.
+- **Wallet connect:** Opening NimCare inside Nimiq Pay triggers SDK `init()` and a real cryptographic login; outside Nimiq Pay, a genuine "Open in Nimiq Pay" conversion screen shows instead of a bare error.
+- **Direct send, no accept gate:** A sender can create and send a CareDrop straight to any valid recipient wallet address, with no prior invite/accept step; the Loop between the two wallets is created automatically, verified by an automated test.
+- **CareDrop send:** Given a type, its content, a recipient, and an amount, submitting triggers a real Nimiq Pay approval request; a user-cancelled approval leaves the CareDrop in a clearly labeled non-funded state with a retry path, never silently "sent."
+- **Verification:** A CareDrop is marked delivered only after the backend independently retrieves and checks the transaction (sender, recipient, amount, on-chain reference) from real Nimiq blockchain data; a mismatch keeps it FAILED with a specific reason, never silently marked delivered.
+- **Recipient access control:** Only the pre-specified recipient wallet, once authenticated, can read a CareDrop's content via its share link; any other wallet gets a clean rejection, not a content leak — verified by an automated test.
+- **Reveal:** The recipient sees the media/content immediately upon opening a delivered CareDrop — there is no locked-note gate in this model; only the on-chain gift itself is gated on real verification.
+- **Loop:** Both wallets see a chronological list of their exchanged moments; a third party cannot query this data.
+- **Resilience:** Every documented failure scenario (cancel connect, cancel payment, invalid recipient address, self-send, unsupported CareDrop type, missing required media, RPC unavailable, transaction mismatch, unauthorized share-link access) renders a specific, non-blank, on-brand UI state or a passing automated test.
 
 ## Hackathon success definition
 
@@ -117,11 +129,11 @@ A judge understands the product in under 60 seconds, a Nimiq wallet is meaningfu
 
 ## Product success definition
 
-A pair of real users complete at least one full CareDrop loop (send → verify → respond → reveal → memory) without needing developer intervention.
+A pair of real users complete at least one full CareDrop exchange (send → verify → open → respond → Loop) without needing developer intervention, and without the recipient ever having to "accept" anything before seeing their surprise.
 
 ## Judge explanation (30 seconds)
 
-"NimCare turns NIM payments into meaningful interactions between people. Instead of sending someone a contextless crypto payment, you send a CareDrop — a small gift with a personal prompt and sealed message. Nimiq Pay handles wallet identity, signing and the actual payment. Once the interaction is completed, the private message unlocks and the moment becomes part of your shared memory. The result is a relationship app where blockchain infrastructure stays in the background while Nimiq makes the experience possible."
+"NimCare turns NIM into meaningful digital surprises. You send a CareDrop — a photo, a song, or a movie-night moment with a little NIM attached — straight to someone, no setup required on their end. They open the link, their wallet authenticates, and the surprise reveals immediately, with the gift already theirs. Nimiq Pay handles the real payment and Nimiq's own blockchain data proves it happened — the backend never just trusts the app's word for it. Every CareDrop two people exchange becomes part of their private Loop, so the relationship keeps building over time instead of being a one-off transaction."
 
 ## Product assumptions
 

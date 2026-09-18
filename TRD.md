@@ -95,18 +95,22 @@ SQLite (dev) file at `server/data/nimcare.db`, WAL mode, schema below. Integers 
 - Checks: existence, sender == claimed sender, recipient == CareDrop recipient wallet, value == CareDrop amount_luna, inclusion/confirmation state per whatever the live schema returns (schema unconfirmed pending an actual RPC endpoint — Spike S4).
 - If `NIMIQ_RPC_URL` is unset or unreachable: CareDrop stays `PAYMENT_SUBMITTED` and the UI shows "Verifying — RPC not configured" rather than a fabricated verified state. This is a real, disclosed limitation, not a bug to hide.
 
-## API contracts (initial, subject to Spike outcomes)
+## API contracts (2026-09-18 pivot — supersedes the pre-pivot list below the note)
+
+> Pre-pivot endpoints (`POST /api/pairs/invite`, `POST /api/pairs/accept`) still exist in `server/src/routes/pairs.ts` for backward compatibility but are no longer part of the primary UX — see `MEMORY.md`.
 
 - `POST /api/auth/nonce` → `{ nonce: string, expiresAt: string }`
-- `POST /api/auth/verify` → `{ sessionToken: string }`
-- `POST /api/pairs/invite` → `{ inviteId: string, token: string, expiresAt: string }`
-- `POST /api/pairs/accept` → `{ pairId: string, status: 'ACCEPTED' }`
-- `GET /api/pairs/:id` → pair + members + relationship type
-- `POST /api/caredrops` → `{ id, recipient, amountLuna, promptText, sealedNote, reference }`
-- `POST /api/caredrops/:id/submit` → `{ txHash }`
-- `GET /api/caredrops/:id` → full state incl. verification status (sealed note omitted unless authorized+completed)
-- `POST /api/caredrops/:id/respond` → `{ responseText, signature? }`
-- `GET /api/pairs/:id/memory` → list of completed CareDrops (summary fields only)
+- `POST /api/auth/verify` → `{ sessionToken: string, address: string }`
+- `POST /api/caredrops` (body: `{ recipientWallet, type, title?, caption?, mediaUrl?, mediaMime?, externalUrl?, amountLuna }`) → `{ id, recipient, amountLuna, reference, shareToken }` — auto-creates the Loop between sender and recipient if it doesn't already exist
+- `POST /api/media/photo` (multipart, field `photo`) → `{ url, mime }` — uploads to Vercel Blob, JPEG/PNG/WebP only, 8MB cap
+- `GET /api/caredrops/types` → curated `CAREDROP_TYPES` list (Photo/Playlist/Movie/Treat headline copy)
+- `POST /api/caredrops/:id/submit` → `{ id, status }`
+- `GET /api/caredrops/:id` → full state (sender or recipient only)
+- `GET /api/caredrops/by-token/:token` → full state, but only for the wallet-authenticated request whose address matches the CareDrop's `recipient_wallet` (or the sender); sets `opened_at` on first recipient open
+- `POST /api/caredrops/:id/respond` → `{ caredrop }`
+- `GET /api/pairs/mine` → the caller's Loops
+- `GET /api/pairs/:id` → Loop + members
+- `GET /api/pairs/:id/memory` → Loop's moment history (CareDrops in `DELIVERED` or `COMPLETED` state)
 
 ## Data model
 
@@ -119,16 +123,20 @@ CREATE TABLE wallet (
   updated_at TEXT NOT NULL
 );
 
+-- relationship_type is nullable post-pivot: a Loop forms automatically on
+-- first CareDrop exchange, with nobody asked to classify the relationship.
 CREATE TABLE pair (
   id TEXT PRIMARY KEY,
   member_a_wallet TEXT NOT NULL REFERENCES wallet(address),
   member_b_wallet TEXT REFERENCES wallet(address),
-  relationship_type TEXT NOT NULL CHECK (relationship_type IN ('PARTNER','FRIEND','FAMILY')),
+  relationship_type TEXT CHECK (relationship_type IN ('PARTNER','FRIEND','FAMILY')),
   status TEXT NOT NULL CHECK (status IN ('PENDING','ACCEPTED')),
   created_at TEXT NOT NULL,
   paired_at TEXT
 );
 
+-- Legacy pre-pivot invite/accept flow; kept for backward compatibility,
+-- not used by the current primary UX.
 CREATE TABLE pair_invite (
   id TEXT PRIMARY KEY,
   pair_id TEXT NOT NULL REFERENCES pair(id),
@@ -144,13 +152,27 @@ CREATE TABLE caredrop (
   pair_id TEXT NOT NULL REFERENCES pair(id),
   sender_wallet TEXT NOT NULL REFERENCES wallet(address),
   recipient_wallet TEXT NOT NULL REFERENCES wallet(address),
+  -- pre-pivot fields, nullable now, superseded by type/title/caption below
   prompt_id TEXT,
-  prompt_text TEXT NOT NULL,
+  prompt_text TEXT,
+  sealed_note TEXT,
+  type TEXT NOT NULL DEFAULT 'TREAT' CHECK (type IN ('PHOTO','PLAYLIST','MOVIE','TREAT')),
+  title TEXT,
+  caption TEXT,
+  media_url TEXT,
+  media_mime TEXT,
+  external_url TEXT,
+  external_provider TEXT,
+  external_title TEXT,
+  funding_type TEXT NOT NULL DEFAULT 'DIRECT_NIM' CHECK (funding_type IN ('DIRECT_NIM','CASHLINK')),
+  share_token_hash TEXT,
+  opened_at TEXT,
   amount_luna INTEGER NOT NULL CHECK (amount_luna > 0),
-  sealed_note TEXT NOT NULL,
+  reference TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN
     ('DRAFT','AWAITING_PAYMENT','PAYMENT_SUBMITTED','PAYMENT_VERIFIED','DELIVERED','COMPLETED','FAILED')),
-  transaction_hash TEXT,
+  failure_reason TEXT,
+  transaction_hash TEXT UNIQUE,
   blockchain_verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED'
     CHECK (blockchain_verification_status IN ('UNVERIFIED','PENDING','VERIFIED','MISMATCH','RPC_UNAVAILABLE')),
   created_at TEXT NOT NULL,
@@ -168,7 +190,11 @@ CREATE TABLE caredrop_response (
 );
 ```
 
-Allowed state machine transitions: `DRAFT → AWAITING_PAYMENT → PAYMENT_SUBMITTED → PAYMENT_VERIFIED → DELIVERED → COMPLETED`, with `FAILED` reachable from `AWAITING_PAYMENT`, `PAYMENT_SUBMITTED`, or `PAYMENT_VERIFIED`. No other transitions permitted; enforced in a single server-side state-machine function, not scattered across route handlers.
+Allowed state machine transitions unchanged by the pivot: `DRAFT → AWAITING_PAYMENT → PAYMENT_SUBMITTED → PAYMENT_VERIFIED → DELIVERED → COMPLETED`, with `FAILED` reachable from `AWAITING_PAYMENT`, `PAYMENT_SUBMITTED`, or `PAYMENT_VERIFIED`. `opened_at` is a timestamp layered on top (set the first time the recipient opens via share link), not a separate state — there is no "claim" step distinct from `DELIVERED` since direct NIM payment already puts the funds in the recipient's wallet at that point. Migration applied additively (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) against the live production database — see `server/src/db/schema.sql` and `MEMORY.md`.
+
+## Funding model (Cashlink spike result)
+
+`funding_type` models `DIRECT_NIM` (implemented, the only path in use) and `CASHLINK` (reserved, unimplemented). The Cashlink spike concluded FAIL from architectural evidence: `@nimiq/mini-app-sdk`'s provider has no Cashlink methods, and `@nimiq/hub-api`'s Cashlink support is a separate, redirect-based flow (`HubApi.RedirectRequestBehavior`) incompatible with staying inside a Mini App's Nimiq Pay-hosted WebView. Full reasoning and sources in `MEMORY.md`. Practical consequence: the sender must know the recipient's wallet address at CareDrop creation time (selected from an existing Loop, or entered directly) — there is no NULL-recipient "first opener claims it" flow, which also means CareDrop content access is gated by a simple "does the authenticated wallet match the pre-specified recipient" check rather than an atomic first-claim race.
 
 ## Security
 

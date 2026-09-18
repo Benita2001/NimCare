@@ -70,6 +70,22 @@ Status values: TODO / IN_PROGRESS / DONE / BLOCKED. Update as work proceeds.
 - **NIM-039** [DONE] Migrated `server/` from `better-sqlite3` (unsuitable for serverless) to Postgres (`pg`, Neon via Vercel Marketplace) to support real production deployment — schema, all routes, and the verification service converted to async.
 - **NIM-040** [TODO — human] Run `DEVICE_TESTING.md`'s two-phone protocol on real hardware; fill in real PASS/FAIL results.
 
+## Phase 9 — Product Pivot: Surprise-First Media CareDrops (2026-09-18)
+
+Checkpoint before this pivot: git tag `pre-media-caredrop-pivot` at commit `312b0c4`.
+
+- **NIM-041** [DONE] Quick overlap audit against Nimiquette/Ralli/KashLink (web search only) — recorded in `MEMORY.md`; no substantive copying risk identified for the chosen direction.
+- **NIM-042** [DONE] Cashlink spike — result **FAIL**, concluded from architectural evidence (no Cashlink methods on the Mini App SDK provider; Hub API's Cashlink support is redirect-based, incompatible with a Mini App WebView) rather than a live device test, since no device was available. Full reasoning in `MEMORY.md`. Decision: `DIRECT_NIM` remains the only funding rail; `funding_type` enum keeps `CASHLINK` reserved but unimplemented.
+- **NIM-043** [DONE] Additive Postgres migration (no destructive rewrite) adding `type`, `title`, `caption`, `media_url`, `media_mime`, `external_url/provider/title`, `funding_type`, `share_token_hash`, `opened_at` to `caredrop`; `relationship_type` on `pair` made nullable. Applied automatically via `ensureMigrated()` against the live database.
+- **NIM-044** [DONE] Real photo storage: Vercel Blob store `nimcare-media` provisioned (`vercel blob create-store`), `POST /api/media/photo` endpoint (multer memory storage, JPEG/PNG/WebP only, 8MB cap, no SVG/HTML). Verified live: a real image was uploaded to a real Blob URL in both a local smoke test and a production smoke test.
+- **NIM-045** [DONE] Reworked `POST /api/caredrops` to take `recipientWallet` directly and auto-create the Loop (`findOrCreateLoop`) — no invite/accept step. Verified live and via 4 new integration tests (auto-Loop creation, invalid recipient/self-send rejection, share-token authorization, invalid type/missing-media rejection). 23/23 tests passing total.
+- **NIM-046** [DONE] `GET /api/caredrops/by-token/:token` — share-link opening gated on the pre-specified recipient wallet matching the authenticated session; a stranger gets a clean 403, verified by both an automated test and a live production smoke test.
+- **NIM-047** [DONE] New frontend: redesigned Home (type picker + Loop list, no setup language), generic `Composer.tsx` for Photo/Playlist/Movie/Treat, `ShareSuccess.tsx`, `Reveal.tsx` (teaser → open → media reveal → respond → Send one back), `LoopScreen.tsx` (moments timeline). Old `Pairing.tsx`/`CreateCareDrop.tsx`/`PairHome.tsx`/`CareDropView.tsx` removed (superseded, not left as dead code). Lint/typecheck/build clean.
+- **NIM-048** [DONE] Visual refresh per the pivot brief (warm parchment/ink/coral/plum palette, editorial display typeface for headlines) — live-verified in the browser at mobile viewport.
+- **NIM-049** [DONE] `PRIVACY.md` updated for uploaded photos (Blob URL access model, explicitly non-encrypted, accurate about what a share link does and doesn't protect) and external music/movie links.
+- **NIM-050** [TODO] Playlist/Movie CareDrop types are implemented in the composer/reveal UI (generic external-link card) but not separately device- or link-preview-tested — only Photo and Treat were exercised in the live smoke tests during this session, per the pivot brief's own fallback ("a single great CareDrop experience is preferable to three broken media types").
+- **NIM-051** [TODO — human] Re-run `DEVICE_TESTING.md`'s two-phone protocol against the pivoted flow (share link → teaser → open → reveal → respond → Send one back) — the previous protocol document still describes the pre-pivot invite/accept flow and needs a rewrite pass alongside the actual device test.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

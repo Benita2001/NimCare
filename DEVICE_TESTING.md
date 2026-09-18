@@ -1,5 +1,7 @@
 # DEVICE_TESTING — NimCare Two-Phone Protocol
 
+> **2026-09-18 pivot notice**: NimCare pivoted from a pair-first/text-prompt model to surprise-first media CareDrops (see `MEMORY.md`). The step-by-step protocol below still describes the **pre-pivot** invite/accept flow and has not yet been rewritten for the current flow (tracked as `TASKS.md` NIM-051). The new flow to test is: connect → compose a Photo CareDrop → send directly to a wallet (no pairing step) → approve real NIM tx → share the link → recipient opens via `?d=<token>` → authenticates → "A CareDrop found you" teaser → "Open surprise" → media reveals → responds → "Send one back" → Loop shows the moment automatically. Everything server-side this exercises (auth, verification, share-token authorization, auto-Loop creation) is covered by the 23 automated tests in `server/src/integration.test.ts` and by live production smoke tests recorded in `MEMORY.md` — only the on-device UI walkthrough itself remains genuinely untested.
+
 This document is the reproducible script for testing the Critical Demo Path on real hardware inside Nimiq Pay. It has **not yet been run** as of this writing (2026-09-18) — this coding environment has no physical device with Nimiq Pay installed. Everything below is written so a human can execute it directly and fill in the PASS/FAIL column truthfully.
 
 ## Prerequisites
