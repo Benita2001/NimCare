@@ -8,7 +8,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      'content-type': 'application/json',
+      ...(options.body && !(options.body instanceof FormData) ? { 'content-type': 'application/json' } : {}),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -20,6 +20,35 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
     throw err;
   }
   return json as T;
+}
+
+export interface CareDropType {
+  type: 'PHOTO' | 'PLAYLIST' | 'MOVIE' | 'TREAT';
+  emoji: string;
+  cardTitle: string;
+  headline: string;
+}
+
+export interface CareDrop {
+  id: string;
+  pairId: string;
+  senderWallet: string;
+  recipientWallet: string;
+  type: CareDropType['type'];
+  title: string | null;
+  caption: string | null;
+  mediaUrl: string | null;
+  mediaMime: string | null;
+  externalUrl: string | null;
+  externalProvider: string | null;
+  amountLuna: number;
+  status: string;
+  failureReason: string | null;
+  transactionHash: string | null;
+  blockchainVerificationStatus: string;
+  createdAt: string;
+  openedAt: string | null;
+  completedAt: string | null;
 }
 
 export const api = {
@@ -36,39 +65,32 @@ export const api = {
       body: JSON.stringify(params),
     }),
 
-  prompts: () => request<{ prompts: Array<{ id: string; emoji: string; title: string; promptText: string; relationshipTypes: string[] }> }>(
-    '/caredrops/prompts',
-  ),
+  careDropTypes: () => request<{ types: CareDropType[] }>('/caredrops/types'),
 
-  createInvite: (relationshipType: string, token: string) =>
-    request<{ inviteId: string; pairId: string; token: string; expiresAt: string }>('/pairs/invite', {
-      method: 'POST',
-      body: JSON.stringify({ relationshipType }),
-    }, token),
-
-  getInvite: (inviteToken: string) =>
-    request<{ pairId: string; relationshipType: string; invitedBy: string }>(`/pairs/invite/${inviteToken}`),
-
-  acceptInvite: (inviteToken: string, token: string) =>
-    request<{ pairId: string; status: string }>('/pairs/accept', {
-      method: 'POST',
-      body: JSON.stringify({ token: inviteToken }),
-    }, token),
-
-  myPairs: (token: string) => request<{ pairs: any[] }>('/pairs/mine', undefined, token),
-
-  getPair: (pairId: string, token: string) => request<{ pair: any }>(`/pairs/${pairId}`, undefined, token),
-
-  getMemory: (pairId: string, token: string) => request<{ memory: any[] }>(`/pairs/${pairId}/memory`, undefined, token),
+  uploadPhoto: async (file: File, token: string) => {
+    const form = new FormData();
+    form.append('photo', file);
+    return request<{ url: string; mime: string }>('/media/photo', { method: 'POST', body: form }, token);
+  },
 
   createCareDrop: (
-    params: { pairId: string; promptId?: string; promptText: string; amountLuna: number; sealedNote: string },
+    params: {
+      recipientWallet: string;
+      type: CareDropType['type'];
+      title?: string;
+      caption?: string;
+      mediaUrl?: string;
+      mediaMime?: string;
+      externalUrl?: string;
+      amountLuna: number;
+    },
     token: string,
   ) =>
-    request<{ id: string; recipient: string; amountLuna: number; reference: string }>('/caredrops', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    }, token),
+    request<{ id: string; recipient: string; amountLuna: number; reference: string; shareToken: string }>(
+      '/caredrops',
+      { method: 'POST', body: JSON.stringify(params) },
+      token,
+    ),
 
   submitPayment: (id: string, txHash: string, token: string) =>
     request<{ id: string; status: string }>(`/caredrops/${id}/submit`, {
@@ -76,11 +98,20 @@ export const api = {
       body: JSON.stringify({ txHash }),
     }, token),
 
-  getCareDrop: (id: string, token: string) => request<{ caredrop: any }>(`/caredrops/${id}`, undefined, token),
+  getCareDrop: (id: string, token: string) => request<{ caredrop: CareDrop }>(`/caredrops/${id}`, undefined, token),
+
+  getCareDropByToken: (shareToken: string, token: string) =>
+    request<{ caredrop: CareDrop }>(`/caredrops/by-token/${shareToken}`, undefined, token),
 
   respond: (id: string, responseText: string, token: string) =>
-    request<{ caredrop: any }>(`/caredrops/${id}/respond`, {
+    request<{ caredrop: CareDrop }>(`/caredrops/${id}/respond`, {
       method: 'POST',
       body: JSON.stringify({ responseText }),
     }, token),
+
+  myLoops: (token: string) => request<{ pairs: any[] }>('/pairs/mine', undefined, token),
+
+  getLoop: (pairId: string, token: string) => request<{ pair: any }>(`/pairs/${pairId}`, undefined, token),
+
+  getLoopMoments: (pairId: string, token: string) => request<{ memory: any[] }>(`/pairs/${pairId}/memory`, undefined, token),
 };

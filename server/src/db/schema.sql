@@ -77,3 +77,35 @@ CREATE TABLE IF NOT EXISTS caredrop_response (
 CREATE INDEX IF NOT EXISTS idx_caredrop_pair ON caredrop(pair_id);
 CREATE INDEX IF NOT EXISTS idx_pair_member_a ON pair(member_a_wallet);
 CREATE INDEX IF NOT EXISTS idx_pair_member_b ON pair(member_b_wallet);
+
+-- 2026-09-18 pivot: surprise-first media CareDrops. Loops now form
+-- automatically the first time two wallets exchange a CareDrop, so a
+-- relationship type is no longer required up front.
+ALTER TABLE pair ALTER COLUMN relationship_type DROP NOT NULL;
+
+-- CareDrops no longer require prompt_text/sealed_note (replaced by
+-- title/caption below); kept nullable for backward compatibility with rows
+-- created before this pivot rather than dropped, to avoid a destructive
+-- migration on the live production database.
+ALTER TABLE caredrop ALTER COLUMN prompt_text DROP NOT NULL;
+ALTER TABLE caredrop ALTER COLUMN sealed_note DROP NOT NULL;
+
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'TREAT'
+  CHECK (type IN ('PHOTO', 'PLAYLIST', 'MOVIE', 'TREAT'));
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS caption TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS media_url TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS media_mime TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS external_url TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS external_provider TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS external_title TEXT;
+-- CASHLINK is modeled but unimplemented — see MEMORY.md for why the
+-- Cashlink spike failed (no createCashlink on the Mini App provider, and
+-- the Hub API's redirect-based flow is incompatible with a Mini App
+-- WebView). DIRECT_NIM is the only funding path this build actually uses.
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS funding_type TEXT NOT NULL DEFAULT 'DIRECT_NIM'
+  CHECK (funding_type IN ('DIRECT_NIM', 'CASHLINK'));
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS share_token_hash TEXT;
+ALTER TABLE caredrop ADD COLUMN IF NOT EXISTS opened_at TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_caredrop_share_token ON caredrop(share_token_hash);

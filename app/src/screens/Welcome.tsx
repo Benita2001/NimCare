@@ -34,8 +34,8 @@ export function WelcomeScreen() {
   return (
     <div className="screen screen-center">
       <div className="brand-mark">💛</div>
-      <h1>Send more than money.</h1>
-      <p className="subtitle">Turn a small NIM gift into a moment that matters.</p>
+      <h1>Make their day.</h1>
+      <p className="subtitle">Send a moment, not just money.</p>
 
       <button className="btn btn-primary" onClick={connect} disabled={status === 'connecting'}>
         {status === 'connecting' ? 'Connecting…' : 'Continue with Nimiq Pay'}

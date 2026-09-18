@@ -4,6 +4,7 @@ import { ensureMigrated } from './db/index.js';
 import { authRouter } from './routes/auth.js';
 import { pairsRouter } from './routes/pairs.js';
 import { caredropsRouter } from './routes/caredrops.js';
+import { mediaRouter } from './routes/media.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const configuredOrigins = (process.env.ALLOWED_ORIGINS ?? '')
@@ -45,6 +46,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/pairs', pairsRouter);
 app.use('/api/caredrops', caredropsRouter);
+app.use('/api/media', mediaRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: any, _req: any, res: any, _next: any) => {

@@ -3,25 +3,26 @@ import { SessionProvider } from './session';
 import { useSession } from './sessionContext';
 import { WelcomeScreen } from './screens/Welcome';
 import { HomeScreen } from './screens/Home';
-import { CreateInviteScreen, AcceptInviteScreen } from './screens/Pairing';
-import { PairHomeScreen } from './screens/PairHome';
-import { CreateCareDropScreen } from './screens/CreateCareDrop';
-import { CareDropViewScreen } from './screens/CareDropView';
+import { ComposerScreen } from './screens/Composer';
+import { ShareSuccessScreen } from './screens/ShareSuccess';
+import { CareDropScreen } from './screens/Reveal';
+import { LoopScreen } from './screens/LoopScreen';
+import type { CareDropType } from './api/client';
 
 type Route =
   | { name: 'home' }
-  | { name: 'createInvite' }
-  | { name: 'acceptInvite'; inviteToken: string }
-  | { name: 'pair'; pairId: string }
-  | { name: 'createCareDrop'; pairId: string; recipientAddress: string }
-  | { name: 'caredrop'; caredropId: string };
+  | { name: 'compose'; type: CareDropType['type']; presetRecipient?: string }
+  | { name: 'shareSuccess'; shareToken: string }
+  | { name: 'caredrop'; caredropId?: string; shareToken?: string }
+  | { name: 'loop'; pairId: string };
 
 function Router() {
   const { status } = useSession();
-  const initialInviteToken = new URLSearchParams(window.location.search).get('invite');
+  const initialShareToken = new URLSearchParams(window.location.search).get('d');
   const [route, setRoute] = useState<Route>(
-    initialInviteToken ? { name: 'acceptInvite', inviteToken: initialInviteToken } : { name: 'home' },
+    initialShareToken ? { name: 'caredrop', shareToken: initialShareToken } : { name: 'home' },
   );
+  const [loops, setLoops] = useState<any[]>([]);
 
   if (status !== 'connected') {
     return <WelcomeScreen />;
@@ -31,48 +32,40 @@ function Router() {
     case 'home':
       return (
         <HomeScreen
-          onCreateInvite={() => setRoute({ name: 'createInvite' })}
-          onOpenPair={(pairId) => setRoute({ name: 'pair', pairId })}
-          onAcceptInviteCode={(token) => setRoute({ name: 'acceptInvite', inviteToken: token })}
+          onSendType={(type) => setRoute({ name: 'compose', type })}
+          onOpenLoop={(pairId) => setRoute({ name: 'loop', pairId })}
+          onLoopsLoaded={setLoops}
         />
       );
-    case 'createInvite':
+    case 'compose':
       return (
-        <CreateInviteScreen
+        <ComposerScreen
+          type={route.type}
+          loops={loops}
+          presetRecipient={route.presetRecipient}
           onBack={() => setRoute({ name: 'home' })}
-          onCreated={(pairId) => setRoute({ name: 'pair', pairId })}
+          onCreated={({ shareToken }) => setRoute({ name: 'shareSuccess', shareToken })}
         />
       );
-    case 'acceptInvite':
-      return (
-        <AcceptInviteScreen
-          inviteToken={route.inviteToken}
-          onBack={() => setRoute({ name: 'home' })}
-          onAccepted={(pairId) => setRoute({ name: 'pair', pairId })}
-        />
-      );
-    case 'pair':
-      return (
-        <PairHomeScreen
-          pairId={route.pairId}
-          onBack={() => setRoute({ name: 'home' })}
-          onSendCareDrop={(recipientAddress) =>
-            setRoute({ name: 'createCareDrop', pairId: route.pairId, recipientAddress })
-          }
-          onOpenCareDrop={(id) => setRoute({ name: 'caredrop', caredropId: id })}
-        />
-      );
-    case 'createCareDrop':
-      return (
-        <CreateCareDropScreen
-          pairId={route.pairId}
-          recipientAddress={route.recipientAddress}
-          onBack={() => setRoute({ name: 'pair', pairId: route.pairId })}
-          onSent={(caredropId) => setRoute({ name: 'caredrop', caredropId })}
-        />
-      );
+    case 'shareSuccess':
+      return <ShareSuccessScreen shareToken={route.shareToken} onDone={() => setRoute({ name: 'home' })} />;
     case 'caredrop':
-      return <CareDropViewScreen caredropId={route.caredropId} onBack={() => setRoute({ name: 'home' })} />;
+      return (
+        <CareDropScreen
+          caredropId={route.caredropId}
+          shareToken={route.shareToken}
+          onBack={() => setRoute({ name: 'home' })}
+          onSendOneBack={(recipientWallet) => setRoute({ name: 'compose', type: 'TREAT', presetRecipient: recipientWallet })}
+        />
+      );
+    case 'loop':
+      return (
+        <LoopScreen
+          pairId={route.pairId}
+          onBack={() => setRoute({ name: 'home' })}
+          onOpenMoment={(id) => setRoute({ name: 'caredrop', caredropId: id })}
+        />
+      );
   }
 }
 

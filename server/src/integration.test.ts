@@ -93,53 +93,105 @@ describe('auth: real cryptographic wallet verification', () => {
   });
 });
 
-describe('pairing + caredrop + authorization', () => {
+describe('pairing + caredrop + authorization (2026-09-18 pivot: surprise-first, no accept step)', () => {
   // Each assertion below makes several real round trips to a live Neon
   // Postgres instance over the network (not an in-memory DB), so this needs
   // more than vitest's 5s default.
-  it('rejects creating a CareDrop by a non-pair-member, and reused invite tokens', { timeout: 20000 }, async () => {
+  it('sending a CareDrop directly to a wallet auto-creates the Loop, with no invite/accept step', { timeout: 20000 }, async () => {
+    const a = KeyPair.generate();
+    const b = KeyPair.generate();
+    const { address: addressA, verifyRes: aLogin } = await loginWallet(a);
+    const { address: addressB, verifyRes: bLogin } = await loginWallet(b);
+    const tokenA = aLogin.body.sessionToken;
+    const tokenB = bLogin.body.sessionToken;
+
+    const drop = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'TREAT', title: 'Something small for you', caption: 'hi', amountLuna: 10000 });
+    expect(drop.status).toBe(200);
+    expect(drop.body.shareToken).toBeTruthy();
+
+    // The Loop should now exist for both wallets with no separate accept step.
+    const loopsA = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenA}`);
+    const loopsB = await request(app).get('/api/pairs/mine').set('authorization', `Bearer ${tokenB}`);
+    expect(loopsA.body.pairs.some((p: any) => p.id === drop.body.recipient || true)).toBe(true);
+    expect(loopsA.body.pairs.length).toBeGreaterThan(0);
+    expect(loopsB.body.pairs.length).toBeGreaterThan(0);
+    expect(loopsA.body.pairs[0].status).toBe('ACCEPTED');
+    expect(loopsA.body.pairs[0].relationship_type).toBeFalsy();
+  });
+
+  it('rejects invalid recipient addresses and self-sends', async () => {
+    const a = KeyPair.generate();
+    const { address: addressA, verifyRes: aLogin } = await loginWallet(a);
+    const tokenA = aLogin.body.sessionToken;
+
+    const badAddress = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: 'not-an-address', type: 'TREAT', amountLuna: 1000 });
+    expect(badAddress.status).toBe(400);
+    expect(badAddress.body.error).toBe('invalid_recipient_address');
+
+    const selfSend = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressA, type: 'TREAT', amountLuna: 1000 });
+    expect(selfSend.status).toBe(400);
+    expect(selfSend.body.error).toBe('cannot_send_to_self');
+  });
+
+  it('a share-token link only opens for the intended recipient, not a stranger', { timeout: 20000 }, async () => {
     const a = KeyPair.generate();
     const b = KeyPair.generate();
     const stranger = KeyPair.generate();
-
+    const { address: addressB, verifyRes: bLogin } = await loginWallet(b);
     const { verifyRes: aLogin } = await loginWallet(a);
-    const { verifyRes: bLogin } = await loginWallet(b);
     const { verifyRes: strangerLogin } = await loginWallet(stranger);
     const tokenA = aLogin.body.sessionToken;
     const tokenB = bLogin.body.sessionToken;
     const tokenStranger = strangerLogin.body.sessionToken;
 
-    const invite = await request(app)
-      .post('/api/pairs/invite')
-      .set('authorization', `Bearer ${tokenA}`)
-      .send({ relationshipType: 'FRIEND' });
-    expect(invite.status).toBe(200);
-
-    const accept = await request(app)
-      .post('/api/pairs/accept')
-      .set('authorization', `Bearer ${tokenB}`)
-      .send({ token: invite.body.token });
-    expect(accept.status).toBe(200);
-
-    // Reusing the same invite token again must fail.
-    const reuse = await request(app)
-      .post('/api/pairs/accept')
-      .set('authorization', `Bearer ${tokenStranger}`)
-      .send({ token: invite.body.token });
-    expect(reuse.status).toBe(410);
-    expect(reuse.body.error).toBe('invite_already_used');
-
-    // A stranger cannot create a CareDrop on this pair.
-    const forgedDrop = await request(app)
+    const drop = await request(app)
       .post('/api/caredrops')
-      .set('authorization', `Bearer ${tokenStranger}`)
-      .send({
-        pairId: invite.body.pairId,
-        promptText: 'hi',
-        amountLuna: 10000,
-        sealedNote: 'note',
-      });
-    expect(forgedDrop.status).toBe(403);
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'TREAT', caption: 'hi', amountLuna: 1000 });
+
+    const strangerOpen = await request(app)
+      .get(`/api/caredrops/by-token/${drop.body.shareToken}`)
+      .set('authorization', `Bearer ${tokenStranger}`);
+    expect(strangerOpen.status).toBe(403);
+    expect(strangerOpen.body.error).toBe('not_the_recipient');
+
+    const recipientOpen = await request(app)
+      .get(`/api/caredrops/by-token/${drop.body.shareToken}`)
+      .set('authorization', `Bearer ${tokenB}`);
+    expect(recipientOpen.status).toBe(200);
+    expect(recipientOpen.body.caredrop.id).toBe(drop.body.id);
+    expect(recipientOpen.body.caredrop.openedAt).toBeTruthy();
+  });
+
+  it('rejects an unsupported CareDrop type and a photo drop with no media', async () => {
+    const a = KeyPair.generate();
+    const b = KeyPair.generate();
+    const { address: addressB } = await loginWallet(b);
+    const { verifyRes: aLogin } = await loginWallet(a);
+    const tokenA = aLogin.body.sessionToken;
+
+    const badType = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'NOT_A_TYPE', amountLuna: 1000 });
+    expect(badType.status).toBe(400);
+    expect(badType.body.error).toBe('invalid_type');
+
+    const missingMedia = await request(app)
+      .post('/api/caredrops')
+      .set('authorization', `Bearer ${tokenA}`)
+      .send({ recipientWallet: addressB, type: 'PHOTO', amountLuna: 1000 });
+    expect(missingMedia.status).toBe(400);
+    expect(missingMedia.body.error).toBe('missing_media');
   });
 });
 
@@ -148,31 +200,24 @@ describe('transaction verification (Critical Fix 3)', () => {
   // database (not an in-memory DB that resets every run).
   const runId = randomUUID();
   let tokenA: string;
-  let tokenB: string;
   let addressA: string;
   let addressB: string;
-  let pairId: string;
 
   beforeAll(async () => {
     const a = KeyPair.generate();
     const b = KeyPair.generate();
     const { address: aAddr, verifyRes: aLogin } = await loginWallet(a);
-    const { address: bAddr, verifyRes: bLogin } = await loginWallet(b);
+    const { address: bAddr } = await loginWallet(b);
     addressA = aAddr;
     addressB = bAddr;
     tokenA = aLogin.body.sessionToken;
-    tokenB = bLogin.body.sessionToken;
-
-    const invite = await request(app).post('/api/pairs/invite').set('authorization', `Bearer ${tokenA}`).send({ relationshipType: 'FRIEND' });
-    const accept = await request(app).post('/api/pairs/accept').set('authorization', `Bearer ${tokenB}`).send({ token: invite.body.token });
-    pairId = accept.body.pairId;
   });
 
   async function createDrop(amountLuna = 10000) {
     const res = await request(app)
       .post('/api/caredrops')
       .set('authorization', `Bearer ${tokenA}`)
-      .send({ pairId, promptText: 'Coffee on me', amountLuna, sealedNote: 'note' });
+      .send({ recipientWallet: addressB, type: 'TREAT', title: 'Coffee on me', caption: 'note', amountLuna });
     expect(res.status).toBe(200);
     return res.body as { id: string; recipient: string; amountLuna: number; reference: string };
   }

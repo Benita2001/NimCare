@@ -102,6 +102,28 @@ function assertPairMember(pair: any, address: string): boolean {
   return pair.member_a_wallet === address || pair.member_b_wallet === address;
 }
 
+/**
+ * 2026-09-18 pivot: a Loop (pair) now forms automatically the first time two
+ * wallets exchange a CareDrop — no invite/accept step. relationship_type is
+ * left NULL since nobody is asked to classify the relationship up front.
+ */
+export async function findOrCreateLoop(walletA: string, walletB: string): Promise<{ id: string }> {
+  const existing = await db.get<{ id: string }>(
+    `SELECT id FROM pair WHERE (member_a_wallet = ? AND member_b_wallet = ?) OR (member_a_wallet = ? AND member_b_wallet = ?)`,
+    [walletA, walletB, walletB, walletA],
+  );
+  if (existing) return existing;
+
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  await db.run(
+    `INSERT INTO pair (id, member_a_wallet, member_b_wallet, relationship_type, status, created_at, paired_at)
+     VALUES (?, ?, ?, NULL, 'ACCEPTED', ?, ?)`,
+    [id, walletA, walletB, now, now],
+  );
+  return { id };
+}
+
 pairsRouter.get(
   '/mine',
   requireSession,
@@ -133,9 +155,11 @@ pairsRouter.get(
     if (!pair) return res.status(404).json({ error: 'pair_not_found' });
     if (!assertPairMember(pair, req.walletAddress)) return res.status(403).json({ error: 'not_a_pair_member' });
 
+    // The Loop's moment history: anything genuinely delivered or completed —
+    // i.e. real, verified moments — not drafts or failed attempts.
     const drops = await db.all(
-      `SELECT id, sender_wallet, recipient_wallet, prompt_text, amount_luna, status, created_at, completed_at
-       FROM caredrop WHERE pair_id = ? AND status = 'COMPLETED' ORDER BY completed_at DESC`,
+      `SELECT id, sender_wallet, recipient_wallet, type, title, caption, media_url, amount_luna, status, created_at, completed_at
+       FROM caredrop WHERE pair_id = ? AND status IN ('DELIVERED', 'COMPLETED') ORDER BY created_at DESC`,
       [pair.id],
     );
     res.json({ memory: drops });

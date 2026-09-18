@@ -1,28 +1,33 @@
 import { useEffect, useState } from 'react';
 import { useSession } from '../sessionContext';
-import { api } from '../api/client';
+import { api, type CareDropType } from '../api/client';
 import { shortenAddress } from '../lib/luna';
 
 export function HomeScreen({
-  onCreateInvite,
-  onOpenPair,
-  onAcceptInviteCode,
+  onSendType,
+  onOpenLoop,
+  onLoopsLoaded,
 }: {
-  onCreateInvite: () => void;
-  onOpenPair: (pairId: string) => void;
-  onAcceptInviteCode: (token: string) => void;
+  onSendType: (type: CareDropType['type']) => void;
+  onOpenLoop: (pairId: string) => void;
+  onLoopsLoaded: (loops: any[]) => void;
 }) {
   const { address, sessionToken } = useSession();
-  const [pairs, setPairs] = useState<any[] | null>(null);
+  const [loops, setLoops] = useState<any[] | null>(null);
+  const [types, setTypes] = useState<CareDropType[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [inviteCode, setInviteCode] = useState('');
 
   useEffect(() => {
     if (!sessionToken) return;
     api
-      .myPairs(sessionToken)
-      .then((res) => setPairs(res.pairs))
+      .myLoops(sessionToken)
+      .then((res) => {
+        setLoops(res.pairs);
+        onLoopsLoaded(res.pairs);
+      })
       .catch((err) => setError(err.message));
+    api.careDropTypes().then((res) => setTypes(res.types));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
 
   return (
@@ -31,43 +36,42 @@ export function HomeScreen({
         <span className="wallet-chip">{address ? shortenAddress(address) : ''}</span>
       </header>
 
-      <h1>NimCare</h1>
+      <h1>Make their day.</h1>
+      <p className="subtitle">Send a moment, not just money.</p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {pairs === null && !error && <p className="hint">Loading your Loops…</p>}
-
-      {pairs && pairs.length === 0 && (
-        <div className="empty-state">
-          <p>You haven't started a Loop yet.</p>
-          <button className="btn btn-primary" onClick={onCreateInvite}>Create your first Loop</button>
-        </div>
-      )}
-
-      {pairs && pairs.length > 0 && (
-        <div className="pair-list">
-          {pairs.map((p) => (
-            <button key={p.id} className="pair-card" onClick={() => onOpenPair(p.id)}>
-              <div className="pair-card-type">{p.relationship_type}</div>
-              <div className="pair-card-status">{p.status === 'ACCEPTED' ? 'Connected' : 'Waiting for them to join'}</div>
-            </button>
-          ))}
-          <button className="btn btn-ghost" onClick={onCreateInvite}>+ Start another Loop</button>
-        </div>
-      )}
-
-      <div className="invite-code-entry">
-        <label className="field-label">Have an invite code?</label>
-        <input
-          className="input"
-          placeholder="Paste invite code…"
-          value={inviteCode}
-          onChange={(e) => setInviteCode(e.target.value)}
-        />
-        <button className="btn btn-ghost" disabled={!inviteCode.trim()} onClick={() => onAcceptInviteCode(inviteCode.trim())}>
-          Accept invite
-        </button>
+      <p className="eyebrow">PICK A MOMENT</p>
+      <div className="type-grid">
+        {types.map((t) => (
+          <button key={t.type} className="type-card" onClick={() => onSendType(t.type)}>
+            <span className="type-card-emoji">{t.emoji}</span>
+            <span className="type-card-title">{t.cardTitle}</span>
+          </button>
+        ))}
       </div>
+
+      <h2 className="section-title">Your Loops</h2>
+      {loops === null && !error && <p className="hint">Loading…</p>}
+      {loops && loops.length === 0 && (
+        <p className="empty-state">No moments yet — send your first CareDrop above.</p>
+      )}
+      {loops && loops.length > 0 && (
+        <div className="loop-list">
+          {loops.map((l) => {
+            const other = l.member_a_wallet === address ? l.member_b_wallet : l.member_a_wallet;
+            return (
+              <button key={l.id} className="loop-card" onClick={() => onOpenLoop(l.id)}>
+                <span>
+                  <div className="loop-card-name">{shortenAddress(other)}</div>
+                  <div className="loop-card-sub">Your moments together</div>
+                </span>
+                <span>→</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

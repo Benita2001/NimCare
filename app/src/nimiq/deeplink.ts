@@ -17,3 +17,10 @@ export function buildNimiqPayOpenLinks(targetUrl: string): { customScheme: strin
 export function inviteTargetUrl(inviteToken: string): string {
   return `${window.location.origin}/?invite=${inviteToken}`;
 }
+
+/** A CareDrop's shareable surprise link. Query-parameter preservation
+ * through the Nimiq Pay deeplink is unconfirmed (see MEMORY.md), so this is
+ * paired with the plain link/copy fallback in the share screen. */
+export function careDropTargetUrl(shareToken: string): string {
+  return `${window.location.origin}/?d=${shareToken}`;
+}
