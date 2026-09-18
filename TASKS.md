@@ -86,6 +86,17 @@ Checkpoint before this pivot: git tag `pre-media-caredrop-pivot` at commit `312b
 - **NIM-050** [TODO] Playlist/Movie CareDrop types are implemented in the composer/reveal UI (generic external-link card) but not separately device- or link-preview-tested — only Photo and Treat were exercised in the live smoke tests during this session, per the pivot brief's own fallback ("a single great CareDrop experience is preferable to three broken media types").
 - **NIM-051** [TODO — human] Re-run `DEVICE_TESTING.md`'s two-phone protocol against the pivoted flow (share link → teaser → open → reveal → respond → Send one back) — the previous protocol document still describes the pre-pivot invite/accept flow and needs a rewrite pass alongside the actual device test.
 
+## Phase 10 — Full Release Audit (2026-09-18)
+
+Checkpoint before this audit: git tag `pre-release-audit` at commit `24a1e03`.
+
+- **NIM-052** [DONE] Independently re-ran quality gates (not trusted from prior narrative) — all clean, 23/23 tests. Independently re-ran a 13-check adversarial live smoke test against production covering auth forgery, malicious upload rejection, tx-hash reuse, share-token privacy, sender/recipient authorization, Loop auto-creation, unauthenticated/malformed request handling. All 13 passed. See `MEMORY.md`.
+- **NIM-053** [DONE] Fixed stale documentation that had drifted across the pivot/redesign passes: `JUDGES.md` (functionality bullet, judge explanation, design/UX paragraph all still described the pre-pivot flow/visual system), `README.md` ("What's real" bullet unrefreshed since before the pivot), `PRIVACY.md` (described a sealed-note-unlocked-by-response mechanic that no longer exists), `TRD.md` (Deployment/Testing Strategy sections still forward-looking despite deployment being complete), `SUBMISSION.md`/`PROJECT_PLAN.md` (stale "20 tests" → 23), `CODE_HANDOFF.md` (entirely rewritten — was untouched since the original 2026-09-16 planning session).
+- **NIM-054** [DONE] Confirmed repo hygiene: no secrets/build-artifacts/stray DB files tracked; no secrets in the built frontend JS bundle (grepped for common secret/connection-string patterns).
+- **NIM-055** [DONE] Investigated a stray `Error`-status Vercel deployment found via `vercel ls --prod`; confirmed it's a harmless auto-deploy race with the GitHub integration, and the production alias correctly points to the healthy deployment.
+- **NIM-056** [TODO — low priority] CORS rejection for a disallowed origin returns a bare 500 instead of a clean 4xx (functionally safe — no ACAO header either way — but not clean). Not fixed in this pass; low risk, cosmetic.
+- **NIM-057** [TODO] Playlist/Movie CareDrop types still lack their own dedicated live smoke test (same gap as NIM-050) — Photo and Treat remain the only types proven end-to-end against production.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

@@ -223,16 +223,16 @@ Every SDK/API call site maps to a specific UI state per PRD P0.12 list — imple
 - `SESSION_SECRET`
 - `NODE_ENV`
 
-## Deployment
+## Deployment (done — see MEMORY.md for provisioning evidence)
 
-Target: simplest platform already available to the user (Vercel is present in this session's tooling). Decision pending Phase 7: if Vercel is used, the Express API needs adaptation to Vercel Functions (Fluid Compute, Node runtime) and SQLite is unsuitable for a stateless serverless deployment (ephemeral filesystem) — production will need a real managed database reachable over the network (e.g. a Postgres from the Vercel Marketplace) before deploying. This is called out as an explicit human action requiring credentials/provisioning, not something to fake.
+Live on Vercel: `app/` deploys as a static site, `server/` deploys as a Vercel Function (`server/api/index.ts` + `server/vercel.json`, Express app served unchanged). Database is real Postgres (Neon, provisioned via `vercel integration add neon` under the Vercel Marketplace) — SQLite was migrated away from entirely (unsuitable for a stateless serverless filesystem) rather than being a future TODO. Photo storage is a real Vercel Blob store (`nimcare-media`). Production URLs: https://nimcare-app.vercel.app, https://nimcare-api.vercel.app.
 
 ## Testing strategy
 
-- Unit: Luna⇄NIM conversion, CareDrop state machine transition guard, invite expiry/consumption, amount validation, authorization checks.
-- Integration: API routes against the SQLite dev DB (create pair → invite → accept → caredrop → submit → mock-verify → respond → complete → memory read).
-- Nimiq wallet interactions: mocked provider only in automated tests, explicitly never presented as proof of real integration (per Hackathon OS rule) — real integration proof comes from manual device testing, documented separately.
-- Static gates: lint, typecheck, build must pass before Quality gate.
+- Unit: Luna⇄NIM conversion, `@nimiq/core` signed-message verification (valid/forged/wrong-key/address-mismatch/malformed-hex).
+- Integration (`server/src/integration.test.ts`, run against the real production Postgres database, not an in-memory/mock DB): auth forgery/expiry/replay rejection, direct-to-wallet CareDrop creation with automatic Loop formation (no invite/accept step — that flow is legacy and no longer exercised by these tests), invalid recipient/self-send/type/missing-media rejection, share-token recipient authorization, and all 6 transaction-verification scenarios (match, recipient/amount/reference mismatch, duplicate-hash rejection, RPC-unavailable graceful degradation).
+- Nimiq wallet interactions: real `@nimiq/core` keypairs used for signature tests (not mocked) — proves the cryptography genuinely round-trips; the Mini App SDK's `window.nimiq` provider itself is still only exercised via a live in-browser check outside Nimiq Pay (the `ProviderUnavailable` path), not inside real Nimiq Pay — that remains a human/device action, documented separately in `DEVICE_TESTING.md`.
+- Static gates: lint (oxlint on `app/`), typecheck, build must pass on both packages — currently green.
 
 ## Technical risks
 

@@ -1,57 +1,48 @@
 # CODE_HANDOFF — NimCare
 
-Planning Gate: **PASS** (2026-09-16). Full detail lives in `PROJECT_PLAN.md`, `PRD.md`, `TRD.md`, `TASKS.md`, `MEMORY.md` — this file is a compact entry point, not a duplicate.
+> **Refreshed 2026-09-18** (release audit pass). This file was stale from the original 2026-09-16 planning session through several rounds of pivot and redesign — it now reflects current reality. Full detail lives in `PROJECT_PLAN.md`, `PRD.md`, `TRD.md`, `TASKS.md`, `MEMORY.md` — this file is a compact entry point, not a duplicate.
 
-## Selected product
+## Selected product (post-pivot)
 
-NimCare — a Nimiq Pay Mini App turning small NIM payments into meaningful shared moments (CareDrop → Loop → Memory). See `PRD.md`.
+NimCare — a Nimiq Pay Mini App turning NIM into meaningful digital surprises: a **CareDrop** (photo/playlist/movie/treat) with a little NIM attached, sent directly to a wallet, no pairing step required. The **Loop** between two wallets forms automatically the first time they exchange one. See `PRD.md`. (The original pair-first/text-prompt-only model is superseded — see git tag `pre-media-caredrop-pivot` for that snapshot.)
 
-## P0 (must ship)
+## P0 (shipped and live)
 
-Wallet-native onboarding, secure session, pairing/invite, CareDrop creation, real NIM transaction, server-side verification, recipient experience, response/completion, sealed-note reveal, memory timeline, full error-state coverage. Full list: `PRD.md` § Scope.
+Wallet-native onboarding with **real cryptographic session auth** (`@nimiq/core` signature verification, not structural-only), direct-to-wallet CareDrop creation (no invite/accept gate), real photo upload (Vercel Blob), real NIM transaction (`sendBasicTransactionWithData`), server-side transaction verification bound to the exact CareDrop, share-token-gated recipient access, response + "Send one back," and the Loop moments timeline. Full list: `PRD.md` § Scope.
 
-## Critical Demo Path
+## Critical Demo Path (current)
 
-Connect wallet → pair → send real NIM CareDrop → server verifies on-chain → recipient responds/completes → note reveals → both see Memory. Full detail: `PROJECT_PLAN.md` § 3.
+Connect wallet → compose a Photo CareDrop → pick recipient (existing Loop or new address) → real NIM transaction → server verifies on-chain and binds it to this CareDrop → share link → recipient opens, authenticates, sees "A CareDrop found you" → media reveals → responds → Loop shows the moment automatically. Full detail: `PROJECT_PLAN.md` § 3.
 
 ## Sponsor integration
 
-`@nimiq/mini-app-sdk`: `init`, `listAccounts`, `sign`, `sendBasicTransactionWithData`. Verified method signatures in `MEMORY.md`. No EVM/USDT usage (NIM only, per non-goals).
+`@nimiq/mini-app-sdk`: `init`, `listAccounts`, `sign`, `sendBasicTransactionWithData` (verified against the SDK's actual shipped source — see `MEMORY.md`). `@nimiq/core` used server-side for real Ed25519 signature verification. Cashlink (`@nimiq/hub-api`) was investigated so senders wouldn't need to know a recipient address up front — **concluded not viable** in the current Mini App SDK (no Cashlink methods on the provider; Hub API's Cashlink support is a redirect-based flow incompatible with a Mini App WebView). `sendBasicTransactionWithData` is the only funding rail actually shipped.
 
-## Technical direction
+## Technical direction (current)
 
-Vite + React + TS mini app (`app/`) + Express + TS API (`server/`) + SQLite (dev; Postgres deferred, needs credentials). Full architecture: `TRD.md`.
+Vite + React + TS mini app (`app/`, deployed as a static site on Vercel) + Express + TS API (`server/`, deployed as a Vercel Function) + **real Postgres** (Neon, provisioned via the Vercel Marketplace — SQLite was fully migrated away from, not deferred) + **real Vercel Blob** for photo storage. Full architecture: `TRD.md`.
 
-## Validation spikes (Phase 0)
+## Live production
 
-S1 provider init, S2 real payment, S3 payment-with-data, S4 transaction verification, S5 signature verification, S6 deeplink, S7 persistence. Status and fallbacks: `PROJECT_PLAN.md` § 9. **S1/S2/S5/S6 need a human with a real Nimiq Pay device** — testnet funding is free and documented (`MEMORY.md`), so this is a device-access blocker, not a funding blocker.
+- Frontend: https://nimcare-app.vercel.app
+- API: https://nimcare-api.vercel.app (health: `/api/health`)
+- Both independently re-verified live during the 2026-09-18 release audit (13-check adversarial smoke test, real crypto, real photo upload, real Postgres, real RPC lookups) — see `MEMORY.md`.
 
-## Resource budget
+## Validation spikes — final status
 
-No time-boxed sub-budgets beyond "protect the Critical Demo Path first, cut P1/P2 before it." Resource risk: no confirmed cloud DB credentials, no confirmed physical device in this environment. See `PROJECT_PLAN.md` § 11 and § 15 (Major Blockers).
-
-## Demo fixture
-
-Two real wallets, one Partner/Friend pair, "Coffee on me ☕" template, 0.1 NIM (configurable). Full spec: `PROJECT_PLAN.md` § 12.
-
-## Winning Requirements Matrix status
-
-See `PROJECT_PLAN.md` § 6 — all rows currently UNKNOWN/PLANNED pending implementation; update statuses as each is proven.
-
-## Assumption register status
-
-See `PROJECT_PLAN.md` § 7 — all technical assumptions UNKNOWN pending Phase 0 spikes; two (S4 RPC endpoint, S5 signature format) carry the highest build risk and should be revisited the moment implementation touches them.
+S1 (provider init), S2 (real payment), S3 (payment-with-data), S4 (transaction verification), S5 (signature verification), S7 (persistence) are all **VERIFIED** via live production evidence and/or real `@nimiq/core` cryptographic round-trips — see `MEMORY.md`. S6 (Cashlink/deeplink) resolved as **FAIL/NOT VIABLE** with architectural evidence, not a live device test. The one thing still genuinely `UNTESTED` is the full flow inside a real physical Nimiq Pay app — no device has been available in this coding environment at any point.
 
 ## Do NOT do
 
-No smart contracts, NFTs, escrow, staking, token incentives, USDT, EVM, native mobile app, AI features, gambling/chance mechanics, social feed, dating functionality, or payment-for-proof mechanics (the NIM is always a gift, never compensation). No fabricated transactions, verification results, users, or persistence. No secrets committed.
+No smart contracts, NFTs, escrow, staking, token incentives, USDT, EVM, native mobile app, AI features, gambling/chance mechanics, social feed, dating functionality, or payment-for-proof mechanics (the NIM is always a gift, never compensation). No fabricated transactions, verification results, users, or persistence. No secrets committed. No Cashlink claims beyond "investigated, not viable." No re-introducing a pairing/accept gate into the primary UX.
 
-## Current risks
+## Current risks / blockers
 
-No confirmed physical Nimiq Pay device/funded wallet in this coding environment (blocks on-device proof of S1/S2/S5/S6 — build proceeds against documented contracts regardless). No confirmed public Nimiq RPC endpoint for server-side verification (S4) — verification service must degrade gracefully rather than fake success.
+No confirmed physical Nimiq Pay device in this coding environment — blocks the final on-device UI walkthrough (`DEVICE_TESTING.md`, still describes the pre-pivot flow and needs a rewrite pass to match current UX, flagged there explicitly). Everything server-side that flow would exercise is proven by 23 automated tests plus live production smoke tests instead.
 
-## First build objective
+## If you are a fresh agent picking this up
 
-Phase 0: scaffold `app/` and `server/`, wire the documented SDK calls and DB schema, prove persistence (NIM-002 through NIM-004 in `TASKS.md`).
-
-Continue directly into implementation — do not stop to re-confirm this handoff.
+1. Read `MEMORY.md` bottom-to-top-ish (most recent entries are appended, each dated) for the actual evidence trail — don't trust any prior session's narrative summary without checking the underlying command output it cites.
+2. Run `cd server && npm test` and `cd app && npm run build` to confirm current state before touching anything.
+3. Check `TASKS.md` for the current open item list (NIM-04x/05x range covers the pivot/redesign/audit work).
+4. The Critical Demo Path is real and proven server-side; the only remaining hard blocker is physical-device testing.

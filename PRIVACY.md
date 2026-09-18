@@ -14,7 +14,7 @@ NimCare is built to collect the minimum needed to make CareDrops work between tw
 
 ## Why it's stored
 
-Purely to run the product: to know who is paired with whom, to hold a CareDrop's state through its lifecycle, and to reveal a sealed note only once it's been legitimately unlocked by both required actions (payment + response).
+Purely to run the product: to know which two wallets share a Loop, to hold a CareDrop's state through its lifecycle, and to reveal its media/caption only to the wallet-authenticated recipient once the payment has been genuinely verified — never to anyone else, and never before real verification.
 
 ## About share links
 
@@ -26,7 +26,7 @@ Only a short, non-private reference string (e.g. `NC:D:<id>`) attached to the NI
 
 ## What never goes on-chain
 
-Your prompt text, your private sealed note, and your response text are **never** written to the blockchain. They live only in NimCare's database.
+Your CareDrop's title, caption, uploaded photo, and your response text are **never** written to the blockchain. They live only in NimCare's database (and Vercel Blob storage for photos).
 
 ## What is not collected
 

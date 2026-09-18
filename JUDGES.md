@@ -4,8 +4,8 @@ A guide to what's real, where the evidence lives, and how NimCare maps to the cu
 
 ## Functionality, Reliability and Usefulness — 45
 
-- **Core feature completes without error**: the full CareDrop loop (create pair → invite → accept → create CareDrop → real NIM transaction → server-side verification → response → reveal → Memory) was proven end-to-end against the live production deployment (`https://nimcare-api.vercel.app`) with a real Neon Postgres database and the real `@nimiq/core` cryptographic library — see `MEMORY.md` for the exact commands and results.
-- **Error handling**: every P0.12 failure mode (provider unavailable, permission denied, consensus not established, payment cancelled, invalid/expired/reused invite, unauthorized pair access, RPC unavailable, transaction mismatch) has a specific UI state and/or a passing automated test — see `DEVICE_TESTING.md` and `server/src/integration.test.ts` (20 passing tests, including 6 authentication-forgery/expiry/replay scenarios and 6 transaction-verification scenarios, all run against the real production-grade Postgres database, not mocks).
+- **Core feature completes without error**: the full CareDrop loop (authenticate → compose a Photo CareDrop directly to a wallet, no pairing step → real NIM transaction → server-side verification bound to that exact CareDrop → share link → recipient opens and authenticates → media reveals → response → automatic Loop) was proven end-to-end against the live production deployment (`https://nimcare-api.vercel.app`) with a real Neon Postgres database, real Vercel Blob photo storage, and the real `@nimiq/core` cryptographic library — see `MEMORY.md` for the exact commands and results, including a 13-check adversarial re-audit run live on 2026-09-18.
+- **Error handling**: every documented failure mode (provider unavailable, wallet permission denied, consensus not established, payment cancelled, invalid recipient address/self-send, unsupported CareDrop type, missing required media, malicious file upload, RPC unavailable, transaction mismatch, unauthorized share-link access, unauthenticated requests, malformed bodies) has a specific UI state and/or a passing automated/live test — see `DEVICE_TESTING.md` and `server/src/integration.test.ts` (23 passing tests, all run against the real production-grade Postgres database, not mocks).
 - **Speed/stability**: static frontend on Vercel's edge, API on Vercel Functions with a pooled Neon connection; no long-running or blocking operations.
 - **Completeness**: onboarding, pairing, CareDrop creation/payment/verification, response/reveal, and Memory are all implemented, not stubbed.
 - **Real need / target audience**: partners, friends, and family living apart, who want a payment that carries intentional meaning instead of being a contextless transfer — see `PRD.md`.
@@ -28,7 +28,7 @@ A guide to what's real, where the evidence lives, and how NimCare maps to the cu
 
 ## Design & UX — 10
 
-Warm/premium editorial visual direction (parchment background, ink typography, coral/plum/gold accents, serif display headlines — see `DESIGN.md`), mobile-first (verified with no horizontal overflow at 375×812 via the browser tool, live in production), a clear primary action ("Make their day → Send a CareDrop"), wallet onboarding explained in plain language before the permission prompt, and a deliberate photo-first reveal moment (fade-up animation, respects `prefers-reduced-motion`). The product leads with "Send a moment, not just money," not blockchain terminology — a judge should understand the pitch in under 60 seconds (see the one-sentence pitch in `SUBMISSION.md`).
+Warm off-white consumer-product visual direction (Manrope typography, coral primary action with sky/green/gold accents used narrowly, original illustrated envelope mascot and supporting characters instead of emoji — see `DESIGN.md`), a light theme forced regardless of system dark-mode preference, mobile-first (verified with no horizontal overflow at 320–430px via the browser tool, live in production, including with the browser emulator forced to dark mode to confirm the theme holds), a single clear primary action ("Send a CareDrop," no competing secondary CTA), and a deliberate photo-first reveal moment (fade-up animation, respects `prefers-reduced-motion`). The product leads with "Send a moment, not just money," not blockchain terminology — a judge should understand the pitch in under 60 seconds (see the one-sentence pitch in `SUBMISSION.md`).
 
 ## Real Usage — 15
 
@@ -40,10 +40,10 @@ See `SUBMISSION.md` for the checklist status — public GitHub repo (done), MIT 
 
 ## Judge explanation (30 seconds)
 
-"NimCare turns NIM payments into meaningful interactions between people. Instead of sending someone a contextless crypto payment, you send a CareDrop — a small gift with a personal prompt and sealed message. Nimiq Pay handles wallet identity, signing, and the actual payment, and the recipient owns the gift immediately, before responding to anything. Once they respond, the private message unlocks and the moment becomes part of your shared memory. The blockchain infrastructure stays in the background — real signature verification and real on-chain reconciliation happen server-side — while Nimiq makes the whole trust and payment relationship possible."
+"NimCare turns NIM into meaningful digital surprises. You send a CareDrop — a photo, a song, or a movie-night moment with a little NIM attached — straight to someone, no setup required on their end. They open the link, their wallet authenticates, and the surprise reveals immediately, with the gift already theirs. Nimiq Pay handles the real payment and Nimiq's own blockchain data proves it happened — the backend never just trusts the app's word for it. Every CareDrop two people exchange becomes part of their private Loop, so the relationship keeps building over time instead of being a one-off transaction."
 
 ## What to independently verify
 
 - Live production health check: `curl https://nimcare-api.vercel.app/api/health`
-- Automated evidence: `cd server && npm test` (20 tests, real Postgres, real `@nimiq/core` cryptography)
+- Automated evidence: `cd server && npm test` (23 tests, real Postgres, real `@nimiq/core` cryptography)
 - On-device proof: see `DEVICE_TESTING.md` — marked `UNTESTED` for anything genuinely not yet run on a physical device with Nimiq Pay, by design, so this document never overclaims.

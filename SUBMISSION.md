@@ -45,7 +45,7 @@ TODO — not yet posted.
 - [x] Core CareDrop loop implemented and proven end to end against the live production deployment (see `MEMORY.md`)
 - [x] Production deployment — live on Vercel with a real Neon Postgres database
 - [x] Real cryptographic wallet authentication (not just structural checks)
-- [x] Automated tests: 20 passing (auth forgery/expiry/replay, transaction verification, authorization, invite consumption) — `cd server && npm test`
+- [x] Automated tests: 23 passing (auth forgery/expiry/replay, transaction verification, automatic Loop creation, share-token authorization) — `cd server && npm test`; independently re-verified live against production with a 13-check adversarial smoke test on 2026-09-18 (see `MEMORY.md`)
 - [x] Lint/typecheck/build clean on both packages
 - [ ] Real on-device Nimiq Pay test with two funded wallets — human action required, protocol ready in `DEVICE_TESTING.md`
 - [ ] Demo video recorded
