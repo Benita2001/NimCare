@@ -31,10 +31,14 @@ export function HomeScreen({
   onSendType,
   onOpenLoop,
   onLoopsLoaded,
+  onShowPrivacy,
+  onShowTerms,
 }: {
   onSendType: (type: CareDropType['type']) => void;
   onOpenLoop: (pairId: string) => void;
   onLoopsLoaded: (loops: any[]) => void;
+  onShowPrivacy: () => void;
+  onShowTerms: () => void;
 }) {
   const { address, sessionToken } = useSession();
   const [loops, setLoops] = useState<any[] | null>(null);
@@ -116,9 +120,9 @@ export function HomeScreen({
         </div>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
       {typesError && (
-        <div className="alert alert-error">
+        <div className="alert alert-error" role="alert">
           <p>{typesError}</p>
           <button className="btn btn-ghost" onClick={() => api.careDropTypes().then((res) => { setTypes(res.types); setTypesError(null); }).catch((err) => setTypesError(err instanceof Error ? err.message : 'Could not load CareDrop types.'))}>
             Try again
@@ -175,6 +179,15 @@ export function HomeScreen({
           })}
         </div>
       )}
+
+      <footer style={{ textAlign: 'center', marginTop: 24, paddingBottom: 8 }}>
+        <button className="btn btn-ghost" style={{ fontSize: 13, minHeight: 'auto', padding: '4px 8px' }} onClick={onShowPrivacy}>
+          Privacy
+        </button>
+        <button className="btn btn-ghost" style={{ fontSize: 13, minHeight: 'auto', padding: '4px 8px' }} onClick={onShowTerms}>
+          Terms
+        </button>
+      </footer>
     </div>
   );
 }

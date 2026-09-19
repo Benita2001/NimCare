@@ -131,10 +131,10 @@ export function TxDiagnosticScreen() {
       <p className="hint">
         Not linked from normal navigation — reached via ?diag=tx only. Remove after device retest confirms the fix.
       </p>
-      <label className="field-label">Recipient</label>
-      <input className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="NQ.." />
-      <label className="field-label">Amount (NIM)</label>
-      <input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <label className="field-label" htmlFor="diag-recipient">Recipient</label>
+      <input id="diag-recipient" className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="NQ.." />
+      <label className="field-label" htmlFor="diag-amount">Amount (NIM)</label>
+      <input id="diag-amount" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
 
       <p className="hint" style={{ marginTop: 12 }}>Baseline (already run on-device with PASS — for reference/re-run only)</p>
       {btn('Test A: sendBasicTransaction', {})}

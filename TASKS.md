@@ -157,6 +157,23 @@ Triggered by the Prepared-Card test's "Prepare" step failing with `internal_erro
 - **NIM-089** [DONE] Improved global error handler to log safe structured fields (code/constraint/table/route/method) for DB errors instead of the raw error object, which previously included the recipient's address in `detail`. Client-facing response unchanged.
 - **NIM-090** [TODO — blocking, demo-critical] Prepared-Card retest not yet performed on the real device. Backend fix is code-confirmed (36/36 tests passing, including a direct reproduction of the exact production bug) but the end-to-end demo path (Prepare → Send → normal Photo CareDrop → receiver flow) remains unverified until a human retests.
 
+## Phase 16 — Post-Submission Production Hardening (2026-09-18)
+
+Focused reliability/branding/accessibility/metadata pass after competition submission — no product concept, feature, or core UI changes.
+
+- **NIM-091** [DONE] Replaced the default Vite/Vercel purple-lightning favicon with the real NimCare envelope mark (SVG + 16/32px PNG + 180px apple-touch-icon + 192/512px manifest icons).
+- **NIM-092** [DONE] Added real social/link-preview metadata (og:*, twitter:*) and a new on-brand 1200×630 `social-card.png` (no existing suitable artwork was in the repo).
+- **NIM-093** [DONE] Added in-app Privacy and Terms pages (summarizing existing `PRIVACY.md`, not replacing it), linked from an unobtrusive footer pre- and post-auth.
+- **NIM-094** [DONE] Fixed a real bug found while testing: SPA screen transitions didn't reset scroll position, so navigating to a shorter screen after scrolling down on a longer one rendered blank until manually scrolled up. Central fix in `App.tsx`.
+- **NIM-095** [DONE] Fixed a real 320px-width header overflow (`flex-wrap` missing on `.app-header`). Verified no horizontal overflow at 320/360/375/390/430/desktop.
+- **NIM-096** [DONE] Fixed a real backend crash: bare API root (`/`) returned `FUNCTION_INVOCATION_FAILED` because Vercel's zero-config builder was also treating `src/app.ts` as an unintended second function. Scoped `functions` in `server/vercel.json` to `api/**/*.ts`.
+- **NIM-097** [DONE] Fixed 9 unassociated form labels (`htmlFor`/`id`), one meaningfully-empty image alt (the revealed CareDrop photo), missing `role="alert"` on 5 of 6 error banners, missing button `:focus-visible` styling, and a borderline WCAG AA contrast failure on muted body text.
+- **NIM-098** [TODO — flagged, not fixed] Primary button (white-on-accent) text contrast measures 3.60:1, under the 4.5:1 AA threshold for its actual font size/weight. Not fixed because doing so requires changing the brand's core CTA color or button text color, which is out of this pass's explicit scope. Needs explicit user approval.
+- **NIM-099** [DONE] Added safe security headers (`X-Content-Type-Options`, `Referrer-Policy`, narrow `Permissions-Policy`) to both projects; deliberately did not add `X-Frame-Options`/CSP `frame-ancestors` given inability to verify Nimiq Pay WebView compatibility from this environment.
+- **NIM-100** [DONE] Re-confirmed secrets audit clean (bundle-scanned, not just source-scanned). Confirmed photo upload limits already correctly configured, no change needed.
+- **NIM-101** [DONE] Added `robots.txt` and `manifest.webmanifest`; deliberately deferred `sitemap.xml` (no distinct indexable public URLs).
+- **NIM-102** [NOT DONE — explicit instruction] Debug UI (`?diag=tx`, `?diag=prepared`, "Replay exact payload") intentionally left in place — must not be removed until a human confirms the real-device sender→receiver flow works end to end.
+
 ## Scope change protocol
 
 Any task not listed here that gets proposed later must record: rubric/P0 impact, effort, new risk, and what gets cut — append to `PROJECT_PLAN.md` § Scope Change Log before starting it.

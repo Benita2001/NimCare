@@ -36,7 +36,7 @@ export function LoopScreen({
       .catch((err) => setError(err.message));
   }, [pairId, sessionToken]);
 
-  if (error) return <div className="screen screen-center"><div className="alert alert-error">{error}</div></div>;
+  if (error) return <div className="screen screen-center"><div className="alert alert-error" role="alert">{error}</div></div>;
   if (!pair) return <div className="screen screen-center"><p className="hint">Loading…</p></div>;
 
   const other = pair.member_a_wallet === address ? pair.member_b_wallet : pair.member_a_wallet;

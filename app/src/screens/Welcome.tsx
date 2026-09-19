@@ -10,7 +10,13 @@ const ERROR_COPY: Record<string, string> = {
   Unknown: 'Something went wrong connecting your wallet.',
 };
 
-export function WelcomeScreen() {
+export function WelcomeScreen({
+  onShowPrivacy,
+  onShowTerms,
+}: {
+  onShowPrivacy: () => void;
+  onShowTerms: () => void;
+}) {
   const { connect, status, errorKind, errorMessage } = useSession();
 
   // Outside Nimiq Pay, listAccounts() can never succeed — this is a real,
@@ -123,6 +129,15 @@ export function WelcomeScreen() {
           Connect your Nimiq wallet, choose a moment, and send it directly — no setup for them, no accounts to accept. We never see your private keys.
         </p>
       </section>
+
+      <footer style={{ textAlign: 'center', marginTop: 24, paddingBottom: 8 }}>
+        <button className="btn btn-ghost" style={{ fontSize: 13, minHeight: 'auto', padding: '4px 8px' }} onClick={onShowPrivacy}>
+          Privacy
+        </button>
+        <button className="btn btn-ghost" style={{ fontSize: 13, minHeight: 'auto', padding: '4px 8px' }} onClick={onShowTerms}>
+          Terms
+        </button>
+      </footer>
     </div>
   );
 }

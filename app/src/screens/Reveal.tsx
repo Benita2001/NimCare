@@ -70,7 +70,7 @@ export function CareDropScreen({
     );
   }
 
-  if (error) return <div className="screen screen-center"><div className="alert alert-error">{error}</div></div>;
+  if (error) return <div className="screen screen-center"><div className="alert alert-error" role="alert">{error}</div></div>;
   if (!drop) return <div className="screen screen-center"><p className="hint">Loading…</p></div>;
 
   const isRecipient = drop.recipientWallet === address;
@@ -113,7 +113,7 @@ export function CareDropScreen({
       {isDelivered && (
         <>
           <div className="reveal-media-card">
-            {drop.type === 'PHOTO' && drop.mediaUrl && <img src={drop.mediaUrl} alt="" />}
+            {drop.type === 'PHOTO' && drop.mediaUrl && <img src={drop.mediaUrl} alt={drop.caption || drop.title || 'CareDrop photo'} />}
             <div className="reveal-media-body">
               <p className="reveal-headline" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {(() => { const Icon = TYPE_ICON[drop.type] ?? GiftIcon; return <Icon style={{ width: 22, height: 22, flexShrink: 0 }} />; })()}
@@ -136,8 +136,8 @@ export function CareDropScreen({
 
           {isRecipient && drop.status !== 'COMPLETED' && (
             <div className="response-form">
-              <label className="field-label">Say something back</label>
-              <textarea className="input" value={responseText} onChange={(e) => setResponseText(e.target.value)} placeholder="Tell them…" />
+              <label className="field-label" htmlFor="reveal-response-text">Say something back</label>
+              <textarea id="reveal-response-text" className="input" value={responseText} onChange={(e) => setResponseText(e.target.value)} placeholder="Tell them…" />
               <button className="btn btn-primary" disabled={submitting || !responseText.trim()} onClick={submitResponse}>
                 {submitting ? 'Sending…' : 'Send'}
               </button>

@@ -2,7 +2,7 @@
   --color-bg: #FAFAF7;
   --color-surface: #FFFFFF;
   --color-text: #242424;
-  --color-text-muted: #78756E;
+  --color-text-muted: #625F57; /* WCAG AA fix: #78756E was 4.40:1 on --color-bg, just under the 4.5:1 required for the body-copy sizes this token is used at; this is 6.10:1 */
   --color-accent: #D9643A;
   --color-accent-soft: #FBE7DC;
   --color-sky: #57B8F5;
@@ -57,7 +57,7 @@ body { overflow-x: hidden; }
 
 .screen-center { align-items: center; justify-content: center; text-align: center; }
 
-.app-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.app-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .app-header-signin { display: none; }
 @media (min-width: 480px) {
   .app-header-signin { display: inline-flex; }
@@ -189,6 +189,7 @@ h2.section-title { font-size: 18px; font-weight: 700; margin-top: 22px; }
 }
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn:focus-visible { outline: 2px solid var(--color-sky); outline-offset: 2px; }
 .btn-primary { background: var(--color-accent); color: white; }
 .btn-primary:active { opacity: 0.9; }
 .btn-ghost { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }

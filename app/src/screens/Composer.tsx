@@ -219,7 +219,7 @@ export function ComposerScreen({
   if (step === 'error') {
     return (
       <div className="screen screen-center">
-        <div className="alert alert-error">
+        <div className="alert alert-error" role="alert">
           <strong>Couldn't send it.</strong>
           <p>{error}</p>
         </div>
@@ -274,8 +274,8 @@ export function ComposerScreen({
             </button>
           ))}
         </div>
-        <label className="field-label">Or a custom amount (NIM)</label>
-        <input className="input" type="number" min="0.00001" step="0.00001" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <label className="field-label" htmlFor="composer-custom-amount">Or a custom amount (NIM)</label>
+        <input id="composer-custom-amount" className="input" type="number" min="0.00001" step="0.00001" value={amount} onChange={(e) => setAmount(e.target.value)} />
         <p className="hint">= {amount ? lunaToNim(nimToLuna(amount || '0')) : '0'} NIM</p>
         <button className="btn btn-primary" disabled={!(Number(amount) > 0)} onClick={() => setStep('review')}>
           Continue
@@ -311,8 +311,9 @@ export function ComposerScreen({
             })}
           </div>
         )}
-        <label className="field-label">Or send to a new wallet address</label>
+        <label className="field-label" htmlFor="composer-custom-address">Or send to a new wallet address</label>
         <input
+          id="composer-custom-address"
           className="input"
           placeholder="NQ.."
           value={customAddress}
@@ -358,19 +359,19 @@ export function ComposerScreen({
 
       {(type === 'PLAYLIST' || type === 'MOVIE') && (
         <>
-          <label className="field-label">{type === 'PLAYLIST' ? 'Spotify, Apple Music, or YouTube link' : 'Movie link (optional)'}</label>
-          <input className="input" placeholder="https://…" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
+          <label className="field-label" htmlFor="composer-external-url">{type === 'PLAYLIST' ? 'Spotify, Apple Music, or YouTube link' : 'Movie link (optional)'}</label>
+          <input id="composer-external-url" className="input" placeholder="https://…" value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
           {type === 'MOVIE' && (
             <>
-              <label className="field-label">Movie title (optional)</label>
-              <input className="input" placeholder="Your choice…" value={movieTitle} onChange={(e) => setMovieTitle(e.target.value)} />
+              <label className="field-label" htmlFor="composer-movie-title">Movie title (optional)</label>
+              <input id="composer-movie-title" className="input" placeholder="Your choice…" value={movieTitle} onChange={(e) => setMovieTitle(e.target.value)} />
             </>
           )}
         </>
       )}
 
-      <label className="field-label">Add a note (optional)</label>
-      <textarea className="input" placeholder="Pick something good." value={caption} onChange={(e) => setCaption(e.target.value)} />
+      <label className="field-label" htmlFor="composer-caption">Add a note (optional)</label>
+      <textarea id="composer-caption" className="input" placeholder="Pick something good." value={caption} onChange={(e) => setCaption(e.target.value)} />
 
       <button
         className="btn btn-primary"

@@ -15,6 +15,22 @@ const configuredOrigins = (process.env.ALLOWED_ORIGINS ?? '')
 const devOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):\d+$/;
 
 export const app = express();
+app.disable('x-powered-by');
+
+/**
+ * Deliberately conservative: no X-Frame-Options / Content-Security-Policy
+ * frame-ancestors restriction here. NimCare runs inside Nimiq Pay's
+ * WebView, and this environment cannot verify that a framing restriction
+ * wouldn't break that embedding — see MEMORY.md post-submission hardening
+ * pass. Only headers with no plausible interaction with the Mini App host
+ * are added.
+ */
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  next();
+});
 
 app.use(
   cors({

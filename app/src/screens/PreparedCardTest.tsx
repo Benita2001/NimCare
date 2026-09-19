@@ -92,10 +92,10 @@ export function PreparedCardTestScreen() {
       <p className="hint">
         Not linked from normal navigation — reached via ?diag=prepared only. Remove after device retest.
       </p>
-      <label className="field-label">Recipient</label>
-      <input className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="NQ.." />
-      <label className="field-label">Amount (NIM)</label>
-      <input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <label className="field-label" htmlFor="prepared-recipient">Recipient</label>
+      <input id="prepared-recipient" className="input" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="NQ.." />
+      <label className="field-label" htmlFor="prepared-amount">Amount (NIM)</label>
+      <input id="prepared-amount" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} />
       <button className="btn btn-primary" disabled={busy || !recipient} onClick={prepare}>
         1. Prepare (backend only)
       </button>
