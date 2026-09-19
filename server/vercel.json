@@ -1,6 +1,6 @@
 {
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
   "functions": {
-    "api/**/*.ts": {}
+    "api/**/*.ts": { "memory": 1024 }
   }
 }
